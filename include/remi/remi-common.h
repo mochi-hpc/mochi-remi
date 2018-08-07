@@ -1,6 +1,8 @@
 #ifndef __REMI_COMMON_H
 #define __REMI_COMMON_H
 
+#include <margo.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

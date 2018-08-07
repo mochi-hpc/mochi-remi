@@ -11,6 +11,9 @@ extern "C" {
 typedef struct remi_client* remi_client_t;
 #define REMI_CLIENT_NULL ((remi_client_t)0)
 
+typedef struct remi_provider_handle* remi_provider_handle_t;
+#define REMI_PROVIDER_HANDLE_NULL ((remi_provider_handle_t)0)
+
 int remi_client_init(margo_instance_id mid, remi_client_t* client);
 
 int remi_client_finalize(remi_client_t client);
