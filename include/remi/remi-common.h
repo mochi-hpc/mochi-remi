@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 #define REMI_KEEP_SOURCE 0
-#define REMI_REMOBE_SOURCE 1
+#define REMI_REMOVE_SOURCE 1
 
 #define REMI_SUCCESS             0 /* Success */
 #define REMI_ERR_ALLOCATION     -1 /* Error allocating something */
@@ -21,6 +21,7 @@ extern "C" {
 #define REMI_ERR_SIZE           -8 /* Client did not allocate enough for the requested data */
 #define REMI_ERR_MIGRATION      -9 /* Error during data migration */
 #define REMI_ERR_CLASS_EXISTS  -10 /* Migration class already registered */
+#define REMI_ERR_STAT          -11 /* Error in stat call */
 
 typedef struct remi_fileset* remi_fileset_t;
 #define REMI_FILESET_NULL ((remi_fileset_t)0)

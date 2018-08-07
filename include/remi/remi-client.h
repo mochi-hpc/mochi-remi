@@ -33,6 +33,7 @@ int remi_shutdown_service(remi_client_t client, hg_addr_t addr);
 int remi_fileset_migrate(
         remi_provider_handle_t handle,
         remi_fileset_t fileset,
+        const char* remote_root,
         int flag);
 
 #if defined(__cplusplus)
