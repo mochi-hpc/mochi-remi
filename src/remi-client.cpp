@@ -136,7 +136,7 @@ extern "C" int remi_fileset_migrate(
         if(0 != fstat(fd, &st)) {
             close(fd);
             cleanup();
-            return REMI_ERR_STAT;
+            return REMI_ERR_IO;
         }
         auto size = st.st_size;
         theSizes.push_back(size);
