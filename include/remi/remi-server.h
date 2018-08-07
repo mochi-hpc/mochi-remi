@@ -8,8 +8,7 @@ extern "C" {
 #endif
 
 #define REMI_ABT_POOL_DEFAULT ABT_POOL_NULL
-#define REMI_PROVIDER_ID_DEFAULT 1
-#define REMI_PROVIDER_IGNORE NULL
+#define REMI_PROVIDER_ID_DEFAULT 0
 
 typedef struct remi_provider* remi_provider_t;
 #define REMI_PROVIDER_NULL ((remi_provider_t)0)
@@ -23,7 +22,7 @@ int remi_provider_register(
         ABT_pool pool,
         remi_provider_t* provider);
 
-int remi_provider_add_migration_class(
+int remi_provider_register_migration_class(
         remi_provider_t provider,
         const char* class_name,
         remi_migration_callback_t callback,

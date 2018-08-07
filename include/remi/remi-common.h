@@ -20,6 +20,7 @@ extern "C" {
 #define REMI_ERR_UNKNOWN_META   -7 /* Unknown metadata entry */
 #define REMI_ERR_SIZE           -8 /* Client did not allocate enough for the requested data */
 #define REMI_ERR_MIGRATION      -9 /* Error during data migration */
+#define REMI_ERR_CLASS_EXISTS  -10 /* Migration class already registered */
 
 typedef struct remi_fileset* remi_fileset_t;
 #define REMI_FILESET_NULL ((remi_fileset_t)0)
