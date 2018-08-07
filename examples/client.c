@@ -93,6 +93,9 @@ int main(int argc, char** argv)
         goto error;
     }
 
+    // shut down the server
+    remi_shutdown_service(remi_clt, svr_addr);
+
 finish:
     // cleanup
     remi_fileset_free(fileset);

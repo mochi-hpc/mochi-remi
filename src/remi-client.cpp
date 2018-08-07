@@ -63,6 +63,7 @@ extern "C" int remi_provider_handle_create(
     auto theHandle = new remi_provider_handle(
             tl::endpoint(*(client->m_engine), addr, false), provider_id);
     theHandle->m_client = client;
+    theHandle->m_ref_count = 1;
     *handle = theHandle;
     client->m_num_providers += 1;
     return REMI_SUCCESS;
