@@ -1,5 +1,5 @@
 # list of source files
-set(remi-src remi-server.cpp remi-client.cpp)
+set(remi-src remi-server.cpp remi-client.cpp remi-fileset.cpp)
 
 # load package helper for generating cmake CONFIG packages
 include (CMakePackageConfigHelpers)
