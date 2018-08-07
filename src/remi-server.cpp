@@ -110,7 +110,7 @@ struct remi_provider : public tl::provider<remi_provider> {
         // call the migration callback associated with the class of fileset
         auto& klass = m_migration_classes[fileset.m_class];
         if(klass.m_callback != nullptr) {
-            klass.m_callback(this, &fileset, klass.m_uargs);
+            klass.m_callback(&fileset, klass.m_uargs);
         }
     }
 
