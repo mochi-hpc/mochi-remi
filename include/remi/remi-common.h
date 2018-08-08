@@ -1,3 +1,8 @@
+/*
+ * (C) 2018 The University of Chicago
+ * 
+ * See COPYRIGHT in top-level directory.
+ */
 #ifndef __REMI_COMMON_H
 #define __REMI_COMMON_H
 
