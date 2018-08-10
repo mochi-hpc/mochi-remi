@@ -30,6 +30,13 @@ typedef struct remi_provider* remi_provider_t;
 typedef void (*remi_migration_callback_t)(remi_fileset_t, void*);
 #define REMI_MIGRATION_CALLBACK_NULL ((remi_migration_callback_t)0)
 
+
+/**
+ * @brief Type of callback called on void* user arguments when the
+ * provider is destroyed.
+ */
+typedef void (*remi_uarg_free_t)(void*);
+
 /**
  * @brief Registers a new REMI provider. The provider will be
  * automatically destroyed upon finalizing the margo instance.
@@ -54,6 +61,7 @@ int remi_provider_register(
  * @param[in] provider Provider in which to register a migration class.
  * @param[in] class_name Migration class name.
  * @param[in] callback Callback to call after migration of a fileset of this class.
+ * @param[in] free_fn Function to call on uargs when the provider is destroyed.
  * @param[in] uargs User-argument to pass to the callback.
  *
  * @return REMI_SUCCESS or error code defined in remi-common.h.
@@ -62,6 +70,7 @@ int remi_provider_register_migration_class(
         remi_provider_t provider,
         const char* class_name,
         remi_migration_callback_t callback,
+        remi_uarg_free_t free_fn,
         void* uargs);
 
 #if defined(__cplusplus)

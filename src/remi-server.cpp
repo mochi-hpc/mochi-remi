@@ -22,6 +22,7 @@ namespace tl = thallium;
 
 struct migration_class {
     remi_migration_callback_t m_callback;
+    remi_uarg_free_t          m_free;
     void*                     m_uargs;
 };
 
@@ -148,7 +149,13 @@ struct remi_provider : public tl::provider<remi_provider> {
 
 static void on_finalize(void* uargs) {
     auto provider = static_cast<remi_provider_t>(uargs);
+    for(auto& klass : provider->m_migration_classes) {
+        if(klass.second.m_free != nullptr) {
+            klass.second.m_free(klass.second.m_uargs);
+        }
+    }
     delete provider->m_engine;
+    delete provider;
 }
 
 extern "C" int remi_provider_register(
@@ -169,6 +176,7 @@ extern "C" int remi_provider_register_migration_class(
         remi_provider_t provider,
         const char* class_name,
         remi_migration_callback_t callback,
+        remi_uarg_free_t free_fn,
         void* uargs)
 {
     if(provider == REMI_PROVIDER_NULL || class_name == NULL)
@@ -178,5 +186,6 @@ extern "C" int remi_provider_register_migration_class(
     auto& klass = provider->m_migration_classes[class_name];
     klass.m_callback = callback;
     klass.m_uargs = uargs;
+    klass.m_free = free_fn;
     return REMI_SUCCESS;
 }

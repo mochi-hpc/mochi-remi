@@ -163,7 +163,9 @@ extern "C" int remi_fileset_migrate(
     }
 
     // expose the segments for bulk operations
-    auto localBulk = ph->m_client->m_engine->expose(theData, tl::bulk_mode::read_only);
+    tl::bulk localBulk;
+    if(theData.size() != 0) 
+        localBulk = ph->m_client->m_engine->expose(theData, tl::bulk_mode::read_only);
 
     // send the RPC
     auto localRoot = fileset->m_root;

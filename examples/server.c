@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 
     // create migration class
     ret = remi_provider_register_migration_class(remi_prov, 
-            "my_migration_class", my_migration_callback, NULL);
+            "my_migration_class", my_migration_callback, NULL, NULL);
     if(ret != REMI_SUCCESS) {
         fprintf(stderr, "ERROR: remi_provider_register_migration_class() returned %d\n", ret);
         ret = -1;
