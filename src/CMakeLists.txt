@@ -40,6 +40,11 @@ write_basic_package_version_file(
 # generate our config file for find_package()
 configure_file (remi-config.cmake.in remi-config.cmake @ONLY)
 
+# some bits for the pkg-config file
+set (DEST_DIR "${CMAKE_INSTALL_PREFIX}")
+set (PRIVATE_LIBS "-lthallium")
+configure_file ("remi.pc.in" "remi.pc" @ONLY)
+
 #
 # "make install" rules
 #
@@ -56,3 +61,5 @@ install (FILES "${CMAKE_CURRENT_BINARY_DIR}/remi-config.cmake"
 install (DIRECTORY ../include/remi
          DESTINATION include
          FILES_MATCHING PATTERN "*.h")
+install (FILES "${CMAKE_CURRENT_BINARY_DIR}/remi.pc"
+		DESTINATION "lib/pkgconfig/")
