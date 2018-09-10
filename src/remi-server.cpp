@@ -13,6 +13,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <iostream>
+#include <unordered_map>
 #include <thallium.hpp>
 #include "remi/remi-server.h"
 #include "remi-fileset.hpp"
@@ -28,8 +29,10 @@ struct migration_class {
 
 struct remi_provider : public tl::provider<remi_provider> {
 
-    std::unordered_map<std::string, migration_class> m_migration_classes;
-    tl::engine*                                      m_engine;
+    std::unordered_map<std::string, migration_class>    m_migration_classes;
+    tl::engine*                                         m_engine;
+    tl::pool&                                           m_pool;
+    static std::unordered_map<uint16_t, remi_provider*> m_registered_providers;
 
     void migrate(
             const tl::request& req,
@@ -141,11 +144,18 @@ struct remi_provider : public tl::provider<remi_provider> {
     }
 
     remi_provider(tl::engine* e, uint16_t provider_id, tl::pool& pool)
-    : tl::provider<remi_provider>(*e, provider_id), m_engine(e) {
-        define("remi_migrate", &remi_provider::migrate);
-    } 
+    : tl::provider<remi_provider>(*e, provider_id), m_engine(e), m_pool(pool) {
+        define("remi_migrate", &remi_provider::migrate, pool);
+        m_registered_providers[provider_id] = this;
+    }
+
+    ~remi_provider() {
+        m_registered_providers.erase(get_provider_id());
+    }
 
 };
+
+std::unordered_map<uint16_t, remi_provider*> remi_provider::m_registered_providers;
 
 static void on_finalize(void* uargs) {
     auto provider = static_cast<remi_provider_t>(uargs);
@@ -169,6 +179,27 @@ extern "C" int remi_provider_register(
     auto theProvider = new remi_provider(theEngine, provider_id, thePool);
     margo_push_finalize_callback(mid, on_finalize, theProvider);
     *provider = theProvider;
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_provider_registered(
+        margo_instance_id mid,
+        uint16_t provider_id,
+        int* flag,
+        ABT_pool* pool,
+        remi_provider_t* provider)
+{
+    auto it = remi_provider::m_registered_providers.find(provider_id);
+    if(it == remi_provider::m_registered_providers.end()) {
+        *pool = ABT_POOL_NULL;
+        *provider = REMI_PROVIDER_NULL;
+        *flag = 0;
+    } else {
+        remi_provider* p = it->second;
+        if(provider) *provider = p;
+        if(pool) *pool = p->m_pool.native_handle();
+        *flag = 1;
+    }
     return REMI_SUCCESS;
 }
 

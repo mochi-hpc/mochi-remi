@@ -55,6 +55,29 @@ int remi_provider_register(
         remi_provider_t* provider);
 
 /**
+ * @brief Checks if a REMI provider with the given provider id
+ * is registered. If yes, flag will be set to 1, provider
+ * will be set to the registered provider, and pool will be set
+ * to its associated pool. If not, flag will be
+ * set to 0, pool will be set to ABT_POOL_NULL, and the provider
+ * parameter will be set to REMI_PROVIDER_NULL.
+ *
+ * @param[in]  mid Margo instance.
+ * @param[in]  provider_id Provider id.
+ * @param[out] flag 1 if provider is registered, 0 otherwise.
+ * @param[out] pool Pool used to register the provider.
+ * @param[out] provider Registered provider (if it exists).
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_provider_registered(
+        margo_instance_id mid,
+        uint16_t provider_id,
+        int* flag,
+        ABT_pool* pool,
+        remi_provider_t* provider);
+
+/**
  * @brief Registers a migration class by providing a callback
  * to call when a fileset of that class is migrated.
  *
