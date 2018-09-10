@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <thallium.hpp>
+#include "fs-util.hpp"
 #include "remi/remi-client.h"
 #include "remi-fileset.hpp"
 
@@ -99,6 +100,11 @@ extern "C" int remi_shutdown_service(remi_client_t client, hg_addr_t addr)
     return margo_shutdown_remote_instance(client->m_mid, addr);
 }
 
+static void list_existing_files(const char* filename, void* uargs) {
+    auto files = static_cast<std::set<std::string>*>(uargs);
+    files->emplace(filename);
+}
+
 extern "C" int remi_fileset_migrate(
         remi_provider_handle_t ph,
         remi_fileset_t fileset,
@@ -121,14 +127,20 @@ extern "C" int remi_fileset_migrate(
     std::vector<std::pair<void*,std::size_t>> theData;
     std::vector<std::size_t> theSizes;
 
-    // prepare lambda for cleanin up mapped files
+    // prepare lambda for cleaning up mapped files
     auto cleanup = [&theData]() {
         for(auto& seg : theData) {
             munmap(seg.first, seg.second);
         }
     };
 
-    for(auto& filename : fileset->m_files) {
+    // find the set of files to migrate from the fileset
+    std::set<std::string> files;
+
+    remi_fileset_walkthrough(fileset, list_existing_files,
+            static_cast<void*>(&files));
+
+    for(auto& filename : files) {
         // compose full name
         auto theFilename = fileset->m_root + filename;
         // open file
@@ -167,11 +179,22 @@ extern "C" int remi_fileset_migrate(
     if(theData.size() != 0) 
         localBulk = ph->m_client->m_engine->expose(theData, tl::bulk_mode::read_only);
 
-    // send the RPC
-    auto localRoot = fileset->m_root;
+    // create a copy of the fileset where m_directory is empty
+    // and the filenames in directories have been resolved
+    auto tmp_files = std::move(fileset->m_files);
+    auto tmp_dirs  = std::move(fileset->m_directories);
+    auto tmp_root  = std::move(fileset->m_root);
+    fileset->m_files = files;
+    fileset->m_directories = decltype(fileset->m_directories)();
     fileset->m_root = theRemoteRoot;
+
+    // send the RPC
     int32_t result = ph->m_client->m_migrate_rpc.on(*ph)(*fileset, theSizes, localBulk);
-    fileset->m_root = localRoot;
+
+    // put back the fileset's original members
+    fileset->m_root        = std::move(tmp_root);
+    fileset->m_files       = std::move(tmp_files);
+    fileset->m_directories = std::move(tmp_dirs);
 
     cleanup();
 
@@ -180,9 +203,13 @@ extern "C" int remi_fileset_migrate(
     }
 
     if(flag == REMI_REMOVE_SOURCE) {
-        for(auto& filename : fileset->m_files) {
+        for(auto& filename : files) {
             auto theFilename = fileset->m_root + filename;
             remove(theFilename.c_str());
+        }
+        for(auto& dirname : fileset->m_directories) {
+            auto theDirname = fileset->m_root + dirname;
+            removeRec(theDirname);
         }
     }
 

@@ -19,6 +19,7 @@ struct remi_fileset {
     std::string                       m_root;
     std::map<std::string,std::string> m_metadata;
     std::set<std::string>             m_files;
+    std::set<std::string>             m_directories;
 
     template<typename A>
     void serialize(A& ar) {
@@ -26,6 +27,7 @@ struct remi_fileset {
         ar & m_root;
         ar & m_metadata;
         ar & m_files;
+        ar & m_directories;
     }
 };
 

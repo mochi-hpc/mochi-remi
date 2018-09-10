@@ -117,8 +117,8 @@ int remi_fileset_get_root(
 
 /**
  * @brief Registers a file in the fileset. The provided path
- * should be relative to the fileset's root. The file need not
- * exist at the moment it is being registered (it needs to exist
+ * should be relative to the fileset's root. The file does not need
+ * to exist at the moment it is being registered (it needs to exist
  * when migrating the fileset).
  *
  * @param fileset Fileset in which to register the file.
@@ -129,6 +129,22 @@ int remi_fileset_get_root(
 int remi_fileset_register_file(
         remi_fileset_t fileset,
         const char* filename);
+
+/**
+ * @brief Registers a directory in the fileset. The provided path
+ * should be relative to the fileset's root. The directory does not need
+ * to exist at the moment it is being registered (it needs to exist when
+ * migrating the fileset). When migrating the fileset, all the files and
+ * subdirectories in this directory will be migrated.
+ *
+ * @param fileset Fileset in which to register the directory.
+ * @param dirname Directory path.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_register_directory(
+        remi_fileset_t fileset,
+        const char* dirname);
 
 /**
  * @brief Deregisters a file from the fileset. This deregisters
@@ -146,6 +162,21 @@ int remi_fileset_deregister_file(
         const char* filename);
 
 /**
+ * @brief Deregisters a directory from the fileset. This deregisters
+ * the directory only if the directory has been added using 
+ * remi_fileset_register_directory. If individual files in the directory
+ * have been added independently, this will not deregister them.
+ *
+ * @param fileset Fileset from which to deregister the directory.
+ * @param dirname Directory name.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_deregister_directory(
+        remi_fileset_t fileset,
+        const char* dirname);
+
+/**
  * @brief Iterates over all the files in a fileset in alphabetical
  * order and call the provided callback on the file's name and the
  * provided user-arguments.
@@ -157,6 +188,37 @@ int remi_fileset_deregister_file(
  * @return REMI_SUCCESS or error code defined in remi-common.h.
  */
 int remi_fileset_foreach_file(
+        remi_fileset_t fileset,
+        remi_fileset_callback_t callback,
+        void* uargs);
+
+/**
+ * @brief Iterates over all the directories registered in a fileset
+ * in alphabetical order and call the provided callback on the directory's
+ * name and the provided user-arguments.
+ *
+ * @param fileset Fileset on which to iterate.
+ * @param callback Callback to call on each directory.
+ * @param uargs User-provided arguments (may be NULL).
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_foreach_directory(
+        remi_fileset_t fileset,
+        remi_fileset_callback_t callback,
+        void* uargs);
+
+/**
+ * @brief Iterate over all the files and directories registered in
+ * a fileset and call the callback on all files that actually exist.
+ *
+ * @param fileset Fileset on which to iterate.
+ * @param callback Callback to call on each existing file.
+ * @param uargs User-provided arguments (may be NULL).
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_walkthrough(
         remi_fileset_t fileset,
         remi_fileset_callback_t callback,
         void* uargs);

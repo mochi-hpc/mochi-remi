@@ -17,7 +17,7 @@
 #include <thallium.hpp>
 #include "remi/remi-server.h"
 #include "remi-fileset.hpp"
-#include "fs-util.h"
+#include "fs-util.hpp"
 
 namespace tl = thallium;
 

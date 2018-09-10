@@ -5,6 +5,7 @@
  */
 #include <cstring>
 #include "remi/remi-common.h"
+#include "fs-util.hpp"
 #include "remi-fileset.hpp"
 
 extern "C" int remi_fileset_create(
@@ -109,6 +110,69 @@ extern "C" int remi_fileset_foreach_file(
     if(fileset == REMI_FILESET_NULL || callback == NULL)
         return REMI_ERR_INVALID_ARG;
     for(auto& filename : fileset->m_files) {
+        callback(filename.c_str(), uargs);
+    }
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_fileset_register_directory(
+        remi_fileset_t fileset,
+        const char* dirname)
+{
+    if(fileset == REMI_FILESET_NULL || dirname == NULL)
+        return REMI_ERR_INVALID_ARG;
+    unsigned i = 0;
+    while(dirname[i] == '/') i += 1;
+    fileset->m_directories.insert(dirname+i);
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_fileset_deregister_directory(
+        remi_fileset_t fileset,
+        const char* dirname)
+{
+    if(fileset == REMI_FILESET_NULL || dirname == NULL)
+        return REMI_ERR_INVALID_ARG;
+    unsigned i = 0;
+    while(dirname[i] == '/') i += 1;
+    auto it = fileset->m_directories.find(dirname+i);
+    if(it == fileset->m_directories.end())
+        return REMI_ERR_UNKNOWN_FILE;
+    else
+        fileset->m_directories.erase(dirname+i);
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_fileset_foreach_directory(
+        remi_fileset_t fileset,
+        remi_fileset_callback_t callback,
+        void* uargs)
+{
+    if(fileset == REMI_FILESET_NULL || callback == NULL)
+        return REMI_ERR_INVALID_ARG;
+    for(auto& dirname : fileset->m_directories) {
+        callback(dirname.c_str(), uargs);
+    }
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_fileset_walkthrough(
+        remi_fileset_t fileset,
+        remi_fileset_callback_t callback,
+        void* uargs)
+{
+    if(fileset == REMI_FILESET_NULL || callback == NULL)
+        return REMI_ERR_INVALID_ARG;
+    std::set<std::string> files;
+    for(const auto& filename : fileset->m_files) {
+        files.insert(filename);
+    }
+    for(const auto& dirname : fileset->m_directories) {
+        listFiles(fileset->m_root, dirname, [&files](const std::string& filename) {
+            files.insert(filename);
+        });
+    }
+    for(const auto& filename : files) {
         callback(filename.c_str(), uargs);
     }
     return REMI_SUCCESS;
