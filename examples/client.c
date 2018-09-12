@@ -86,9 +86,13 @@ int main(int argc, char** argv)
     remi_fileset_register_metadata(fileset, "AERED", "qerqwer");
 
     // migrate the fileset
-    ret =  remi_fileset_migrate(remi_ph, fileset, remote_root, REMI_KEEP_SOURCE);
+    int status = 0;
+    ret =  remi_fileset_migrate(remi_ph, fileset, remote_root, REMI_KEEP_SOURCE, &status);
     if(ret != REMI_SUCCESS) {
         fprintf(stderr, "ERROR: remi_fileset_migrate() returned %d\n", ret);
+        if(ret == REMI_ERR_USER) {
+            fprintf(stderr, "-----  user error: %d\n", status);
+        }
         ret = -1;
         goto error;
     }

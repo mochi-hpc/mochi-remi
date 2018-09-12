@@ -28,6 +28,7 @@ extern "C" {
 #define REMI_ERR_CLASS_EXISTS  -10 /* Migration class already registered */
 #define REMI_ERR_FILE_EXISTS   -11 /* File already exists */
 #define REMI_ERR_IO            -12 /* Error in I/O (stat, open, etc.) call */
+#define REMI_ERR_USER          -13 /* User-defined error reported in "status" argument */
 
 /**
  * @brief Fileset type.

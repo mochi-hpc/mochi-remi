@@ -12,12 +12,18 @@ void my_metadata_printer(const char* key, const char* value, void* uarg) {
     fprintf(stdout,"   - %s\t==>\t%s\n", key, value);
 }
 
-void my_migration_callback(remi_fileset_t fileset, void* uargs) {
+int my_pre_migration_callback(remi_fileset_t fileset, void* uargs) {
+    fprintf(stdout, "Migration starting.\n");
+    return 0;
+}
+
+int my_post_migration_callback(remi_fileset_t fileset, void* uargs) {
     fprintf(stdout, "Migration terminated.\n");
     fprintf(stdout, "The following files were transfered:\n");
     remi_fileset_foreach_file(fileset, my_fileset_printer, NULL);
     fprintf(stdout, "Associated metadata:\n");
     remi_fileset_foreach_metadata(fileset, my_metadata_printer, NULL);
+    return 0;
 }
 
 int main(int argc, char** argv)
@@ -71,7 +77,9 @@ int main(int argc, char** argv)
 
     // create migration class
     ret = remi_provider_register_migration_class(remi_prov, 
-            "my_migration_class", my_migration_callback, NULL, NULL);
+            "my_migration_class", 
+            my_pre_migration_callback,
+            my_post_migration_callback, NULL, NULL);
     if(ret != REMI_SUCCESS) {
         fprintf(stderr, "ERROR: remi_provider_register_migration_class() returned %d\n", ret);
         ret = -1;

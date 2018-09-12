@@ -15,6 +15,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <thallium.hpp>
+#include <thallium/serialization/stl/pair.hpp>
 #include "remi/remi-server.h"
 #include "remi-fileset.hpp"
 #include "fs-util.hpp"
@@ -22,7 +23,8 @@
 namespace tl = thallium;
 
 struct migration_class {
-    remi_migration_callback_t m_callback;
+    remi_migration_callback_t m_before_callback;
+    remi_migration_callback_t m_after_callback;
     remi_uarg_free_t          m_free;
     void*                     m_uargs;
 };
@@ -40,10 +42,12 @@ struct remi_provider : public tl::provider<remi_provider> {
             const std::vector<std::size_t>& filesizes,
             tl::bulk& remote_bulk) 
     {
-        int32_t result = 0;
+        // pair of <returnvalue, status>
+        std::pair<int32_t,int32_t> result = {0, 0};
+
         // check that the class of the fileset exists
         if(m_migration_classes.count(fileset.m_class) == 0) {
-            result = REMI_ERR_UNKNOWN_CLASS;
+            result.first = REMI_ERR_UNKNOWN_CLASS;
             req.respond(result);
             return;
         }
@@ -53,12 +57,23 @@ struct remi_provider : public tl::provider<remi_provider> {
         for(const auto& filename : fileset.m_files) {
             auto theFilename = fileset.m_root + filename;
             if(access(theFilename.c_str(), F_OK) != -1) {
-                result = REMI_ERR_FILE_EXISTS;
+                result.first = REMI_ERR_FILE_EXISTS;
                 req.respond(result);
                 return;
             }
         }
         // alright, none of the files already exist
+
+        // call the "before migration" callback
+        auto& klass = m_migration_classes[fileset.m_class];
+        if(klass.m_before_callback != nullptr) {
+            result.second = klass.m_before_callback(&fileset, klass.m_uargs);
+        }
+        if(result.second != 0) {
+            result.first = REMI_ERR_USER;
+            req.respond(result);
+            return;
+        }
 
         std::vector<std::pair<void*,std::size_t>> theData;
 
@@ -81,7 +96,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             int fd = open(theFilename.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
             if(fd == -1) {
                 cleanup();
-                result = REMI_ERR_IO;
+                result.first = REMI_ERR_IO;
                 req.respond(result);
                 return;
             }
@@ -92,7 +107,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             }
             if(ftruncate(fd, filesizes[i]) == -1) {
                 cleanup();
-                result = REMI_ERR_IO;
+                result.first = REMI_ERR_IO;
                 req.respond(result);
                 return;
             }
@@ -100,7 +115,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             if(segment == NULL) {
                 close(fd);
                 cleanup();
-                result = REMI_ERR_IO;
+                result.first = REMI_ERR_IO;
                 req.respond(result);
                 return;
             }
@@ -116,7 +131,7 @@ struct remi_provider : public tl::provider<remi_provider> {
 
         if(transferred != totalSize) {
             // XXX we should cleanup the files that were created
-            result = REMI_ERR_MIGRATION;
+            result.first = REMI_ERR_MIGRATION;
             req.respond(result);
             return;
         }
@@ -125,7 +140,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             if(msync(seg.first, seg.second, MS_SYNC) == -1) {
                 // XXX we should cleanup the files that were created
                 cleanup();
-                result = REMI_ERR_IO;
+                result.first = REMI_ERR_IO;
                 req.respond(result);
                 return;
             }
@@ -133,12 +148,11 @@ struct remi_provider : public tl::provider<remi_provider> {
 
         cleanup();
 
-        // call the migration callback associated with the class of fileset
-        auto& klass = m_migration_classes[fileset.m_class];
-        if(klass.m_callback != nullptr) {
-            klass.m_callback(&fileset, klass.m_uargs);
+        // call the "after" migration callback associated with the class of fileset
+        if(klass.m_after_callback != nullptr) {
+            result.second = klass.m_after_callback(&fileset, klass.m_uargs);
         }
-        result = REMI_SUCCESS;
+        result.first = result.second == 0 ? REMI_SUCCESS : REMI_ERR_USER;
         req.respond(result);
         return;
     }
@@ -206,7 +220,8 @@ extern "C" int remi_provider_registered(
 extern "C" int remi_provider_register_migration_class(
         remi_provider_t provider,
         const char* class_name,
-        remi_migration_callback_t callback,
+        remi_migration_callback_t before_callback,
+        remi_migration_callback_t after_callback,
         remi_uarg_free_t free_fn,
         void* uargs)
 {
@@ -215,7 +230,8 @@ extern "C" int remi_provider_register_migration_class(
     if(provider->m_migration_classes.count(class_name) != 0)
         return REMI_ERR_CLASS_EXISTS;
     auto& klass = provider->m_migration_classes[class_name];
-    klass.m_callback = callback;
+    klass.m_before_callback = before_callback;
+    klass.m_after_callback = after_callback;
     klass.m_uargs = uargs;
     klass.m_free = free_fn;
     return REMI_SUCCESS;

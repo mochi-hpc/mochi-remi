@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <thallium.hpp>
+#include <thallium/serialization/stl/pair.hpp>
 #include "fs-util.hpp"
 #include "remi/remi-client.h"
 #include "remi-fileset.hpp"
@@ -109,7 +110,8 @@ extern "C" int remi_fileset_migrate(
         remi_provider_handle_t ph,
         remi_fileset_t fileset,
         const char* remote_root,
-        int flag)
+        int flag,
+        int* status)
 {
 
     if(ph == REMI_PROVIDER_HANDLE_NULL
@@ -189,7 +191,9 @@ extern "C" int remi_fileset_migrate(
     fileset->m_root = theRemoteRoot;
 
     // send the RPC
-    int32_t result = ph->m_client->m_migrate_rpc.on(*ph)(*fileset, theSizes, localBulk);
+    std::pair<int32_t, int32_t> result = ph->m_client->m_migrate_rpc.on(*ph)(*fileset, theSizes, localBulk);
+    int ret = result.first;
+    *status = result.second;
 
     // put back the fileset's original members
     fileset->m_root        = std::move(tmp_root);
@@ -198,8 +202,12 @@ extern "C" int remi_fileset_migrate(
 
     cleanup();
 
-    if(result != REMI_SUCCESS) {
-        return result;
+    if(ret != REMI_SUCCESS) {
+        return ret;
+    }
+
+    if(*status != 0) {
+        return REMI_ERR_USER;
     }
 
     if(flag == REMI_REMOVE_SOURCE) {

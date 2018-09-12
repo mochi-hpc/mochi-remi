@@ -101,6 +101,7 @@ int remi_shutdown_service(remi_client_t client, hg_addr_t addr);
  * @param fileset Fileset to migrate.
  * @param remote_root Root of the fileset when migrated.
  * @param flag REMI_REMOVE_SOURCE or REMI_KEEP_SOURCE.
+ * @param status Value returned by the user-defined migration callbacks.
  *
  * @return REMI_SUCCESS or error code defined in remi-common.h.
  */
@@ -108,7 +109,8 @@ int remi_fileset_migrate(
         remi_provider_handle_t handle,
         remi_fileset_t fileset,
         const char* remote_root,
-        int flag);
+        int flag,
+        int* status);
 
 #if defined(__cplusplus)
 }
