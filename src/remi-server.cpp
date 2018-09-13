@@ -40,6 +40,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             const tl::request& req,
             remi_fileset& fileset,
             const std::vector<std::size_t>& filesizes,
+            const std::vector<mode_t>& theModes,
             tl::bulk& remote_bulk) 
     {
         // pair of <returnvalue, status>
@@ -93,7 +94,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             auto theDir = theFilename.substr(0, p);
             mkdirs(theDir.c_str());
             totalSize += filesizes[i];
-            int fd = open(theFilename.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
+            int fd = open(theFilename.c_str(), O_RDWR | O_CREAT | O_TRUNC, theModes[i]);
             if(fd == -1) {
                 cleanup();
                 result.first = REMI_ERR_IO;
@@ -112,8 +113,8 @@ struct remi_provider : public tl::provider<remi_provider> {
                 return;
             }
             void *segment = mmap(0, filesizes[i], PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
+            close(fd);
             if(segment == NULL) {
-                close(fd);
                 cleanup();
                 result.first = REMI_ERR_IO;
                 req.respond(result);

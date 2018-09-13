@@ -128,6 +128,7 @@ extern "C" int remi_fileset_migrate(
     // expose the data
     std::vector<std::pair<void*,std::size_t>> theData;
     std::vector<std::size_t> theSizes;
+    std::vector<mode_t> theModes;
 
     // prepare lambda for cleaning up mapped files
     auto cleanup = [&theData]() {
@@ -160,6 +161,8 @@ extern "C" int remi_fileset_migrate(
         }
         auto size = st.st_size;
         theSizes.push_back(size);
+        auto mode = st.st_mode;
+        theModes.push_back(mode);
         if(size == 0) {
             close(fd);
             continue;
@@ -191,7 +194,7 @@ extern "C" int remi_fileset_migrate(
     fileset->m_root = theRemoteRoot;
 
     // send the RPC
-    std::pair<int32_t, int32_t> result = ph->m_client->m_migrate_rpc.on(*ph)(*fileset, theSizes, localBulk);
+    std::pair<int32_t, int32_t> result = ph->m_client->m_migrate_rpc.on(*ph)(*fileset, theSizes, theModes, localBulk);
     int ret = result.first;
     *status = result.second;
 
