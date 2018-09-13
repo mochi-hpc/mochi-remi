@@ -205,8 +205,8 @@ extern "C" int remi_provider_registered(
 {
     auto it = remi_provider::m_registered_providers.find(provider_id);
     if(it == remi_provider::m_registered_providers.end()) {
-        *pool = ABT_POOL_NULL;
-        *provider = REMI_PROVIDER_NULL;
+        if(pool) *pool = ABT_POOL_NULL;
+        if(provider) *provider = REMI_PROVIDER_NULL;
         *flag = 0;
     } else {
         remi_provider* p = it->second;
