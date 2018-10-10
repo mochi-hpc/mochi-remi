@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -173,6 +174,8 @@ extern "C" int remi_fileset_migrate(
             cleanup();
             return REMI_ERR_ALLOCATION;
         }
+        // indicate sequential access
+        madvise(segment, size, MADV_SEQUENTIAL);
         // close file descriptor
         close(fd);
         // insert the segment

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -120,6 +121,7 @@ struct remi_provider : public tl::provider<remi_provider> {
                 req.respond(result);
                 return;
             }
+            madvise(segment, filesizes[i], MADV_SEQUENTIAL);
             theData.emplace_back(segment, filesizes[i]);
             i += 1;
         }
