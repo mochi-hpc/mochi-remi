@@ -7,6 +7,7 @@
 #define __REMI_SERVER_H
 
 #include <remi/remi-common.h>
+#include <abt-io.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -34,7 +35,7 @@ typedef struct remi_provider* remi_provider_t;
  * not erase its original files. In all cases, the return value of this
  * function is propagated back to the source.
  */
-typedef int (*remi_migration_callback_t)(remi_fileset_t, void*);
+typedef int32_t (*remi_migration_callback_t)(remi_fileset_t, void*);
 #define REMI_MIGRATION_CALLBACK_NULL ((remi_migration_callback_t)0)
 
 
@@ -49,6 +50,7 @@ typedef void (*remi_uarg_free_t)(void*);
  * automatically destroyed upon finalizing the margo instance.
  *
  * @param[in] mid Margo instance.
+ * @param[in] abtio ABT-IO instance. May be ABT_IO_INSTANCE_NULL.
  * @param[in] provider_id Provider id.
  * @param[in] pool Argobots pool.
  * @param[out] provider Resulting provider.
@@ -57,6 +59,7 @@ typedef void (*remi_uarg_free_t)(void*);
  */
 int remi_provider_register(
         margo_instance_id mid,
+        abt_io_instance_id abtio,
         uint16_t provider_id,
         ABT_pool pool,
         remi_provider_t* provider);
@@ -72,6 +75,7 @@ int remi_provider_register(
  * @param[in]  mid Margo instance.
  * @param[in]  provider_id Provider id.
  * @param[out] flag 1 if provider is registered, 0 otherwise.
+ * @param[out] abtio ABT-IO instance used by the provider.
  * @param[out] pool Pool used to register the provider.
  * @param[out] provider Registered provider (if it exists).
  *
@@ -81,6 +85,7 @@ int remi_provider_registered(
         margo_instance_id mid,
         uint16_t provider_id,
         int* flag,
+        abt_io_instance_id* abtio,
         ABT_pool* pool,
         remi_provider_t* provider);
 

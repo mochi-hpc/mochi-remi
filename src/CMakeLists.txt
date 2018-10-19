@@ -17,7 +17,7 @@ set (remi-vers "${REMI_VERSION_MAJOR}.${REMI_VERSION_MINOR}")
 set (REMI_VERSION "${remi-vers}.${REMI_VERSION_PATCH}")
 
 add_library(remi ${remi-src})
-target_link_libraries (remi thallium margo)
+target_link_libraries (remi thallium margo abt-io uuid)
 target_include_directories (remi PUBLIC $<INSTALL_INTERFACE:include>)
 
 # local include's BEFORE, in case old incompatable .h files in prefix/include

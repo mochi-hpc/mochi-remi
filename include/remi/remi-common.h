@@ -12,8 +12,11 @@
 extern "C" {
 #endif
 
-#define REMI_KEEP_SOURCE 0      /* Keep the source files/directories */
+#define REMI_KEEP_SOURCE   0    /* Keep the source files/directories */
 #define REMI_REMOVE_SOURCE 1    /* Remove the source files/directories */
+
+#define REMI_USE_MMAP  2 /* Use mmap-ed files to issue transfers (good for memory-based storage) */
+#define REMI_USE_ABTIO 4 /* Use ABT-IO to pipeline read/write with data transfers (good for disks) */
 
 #define REMI_SUCCESS             0 /* Success */
 #define REMI_ERR_ALLOCATION     -1 /* Error allocating something */
@@ -29,6 +32,7 @@ extern "C" {
 #define REMI_ERR_FILE_EXISTS   -11 /* File already exists */
 #define REMI_ERR_IO            -12 /* Error in I/O (stat, open, etc.) call */
 #define REMI_ERR_USER          -13 /* User-defined error reported in "status" argument */
+#define REMI_ERR_INVALID_OPID  -14 /* Invalid UUID operation identifier received */
 
 /**
  * @brief Fileset type.

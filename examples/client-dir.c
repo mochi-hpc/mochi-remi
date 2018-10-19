@@ -16,6 +16,7 @@ int main(int argc, char** argv)
     char* local_root               = argv[2];
     char* remote_root              = argv[3];
     margo_instance_id mid          = MARGO_INSTANCE_NULL;
+    abt_io_instance_id abtio       = ABT_IO_INSTANCE_NULL;
     remi_client_t remi_clt         = REMI_CLIENT_NULL;
     remi_provider_handle_t remi_ph = REMI_PROVIDER_HANDLE_NULL;
     hg_addr_t svr_addr             = HG_ADDR_NULL;
@@ -34,8 +35,11 @@ int main(int argc, char** argv)
         goto error;
     }
 
+    // initialize ABT-IO
+    // TODO
+
     // initialize REMI client
-    ret = remi_client_init(mid, &remi_clt);
+    ret = remi_client_init(mid, abtio, &remi_clt);
     if(ret != REMI_SUCCESS) {
         fprintf(stderr, "ERROR: remi_client_init() returned %d\n", ret);
         ret = -1;
@@ -87,7 +91,7 @@ int main(int argc, char** argv)
 
     // migrate the fileset
     int status = 0;
-    ret =  remi_fileset_migrate(remi_ph, fileset, remote_root, REMI_REMOVE_SOURCE, &status);
+    ret =  remi_fileset_migrate(remi_ph, fileset, remote_root, REMI_REMOVE_SOURCE, REMI_USE_MMAP, &status);
     if(ret != REMI_SUCCESS) {
         fprintf(stderr, "ERROR: remi_fileset_migrate() returned %d (status = %d)\n", ret, status);
         ret = -1;

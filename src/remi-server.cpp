@@ -15,11 +15,14 @@
 #include <string.h>
 #include <iostream>
 #include <unordered_map>
+#include <abt-io.h>
 #include <thallium.hpp>
 #include <thallium/serialization/stl/pair.hpp>
+#include <thallium/serialization/stl/tuple.hpp>
 #include "remi/remi-server.h"
 #include "remi-fileset.hpp"
 #include "fs-util.hpp"
+#include "uuid-util.hpp"
 
 namespace tl = thallium;
 
@@ -30,36 +33,48 @@ struct migration_class {
     void*                     m_uargs;
 };
 
+struct operation {
+    remi_fileset             m_fileset;
+    std::vector<std::size_t> m_filesizes;
+    std::vector<mode_t>      m_modes;
+    std::vector<int>         m_fds;
+};
+
 struct remi_provider : public tl::provider<remi_provider> {
 
     std::unordered_map<std::string, migration_class>    m_migration_classes;
     tl::engine*                                         m_engine;
     tl::pool&                                           m_pool;
+    abt_io_instance_id                                  m_abtio;
+    std::unordered_map<uuid, operation, uuid_hash>      m_op_in_progress;
+
     static std::unordered_map<uint16_t, remi_provider*> m_registered_providers;
 
-    void migrate(
+    void migrate_start(
             const tl::request& req,
             remi_fileset& fileset,
-            const std::vector<std::size_t>& filesizes,
-            const std::vector<mode_t>& theModes,
-            tl::bulk& remote_bulk) 
+            std::vector<std::size_t>& filesizes,
+            std::vector<mode_t>& theModes)
     {
-        // pair of <returnvalue, status>
-        std::pair<int32_t,int32_t> result = {0, 0};
+        // tuple of <returnvalue, userstatus, uuid>
+        std::tuple<int32_t,int32_t,uuid> result;
+        std::get<0>(result) = 0;
+        std::get<1>(result) = 1;
+        // uuid is initialized at random, which is what we want
 
         // check that the class of the fileset exists
         if(m_migration_classes.count(fileset.m_class) == 0) {
-            result.first = REMI_ERR_UNKNOWN_CLASS;
+            std::get<0>(result) = REMI_ERR_UNKNOWN_CLASS;
             req.respond(result);
             return;
         }
-
+        
         // check if any of the target files already exist
         // (we don't want to overwrite)
         for(const auto& filename : fileset.m_files) {
             auto theFilename = fileset.m_root + filename;
             if(access(theFilename.c_str(), F_OK) != -1) {
-                result.first = REMI_ERR_FILE_EXISTS;
+                std::get<0>(result) = REMI_ERR_FILE_EXISTS;
                 req.respond(result);
                 return;
             }
@@ -69,60 +84,98 @@ struct remi_provider : public tl::provider<remi_provider> {
         // call the "before migration" callback
         auto& klass = m_migration_classes[fileset.m_class];
         if(klass.m_before_callback != nullptr) {
-            result.second = klass.m_before_callback(&fileset, klass.m_uargs);
+            std::get<1>(result) = klass.m_before_callback(&fileset, klass.m_uargs);
         }
-        if(result.second != 0) {
-            result.first = REMI_ERR_USER;
+        if(std::get<1>(result) != 0) {
+            std::get<0>(result) = REMI_ERR_USER;
             req.respond(result);
             return;
         }
 
-        std::vector<std::pair<void*,std::size_t>> theData;
-
-        // function to cleanup the segments
-        auto cleanup = [&theData]() {
-            for(auto& seg : theData) {
-                munmap(seg.first, seg.second);
-            }
-        };
-
-        // create files, truncate them, and expose them with mmap
+        // create and open the files
+        std::vector<int> openedFileDescriptors;
         unsigned i=0;
-        size_t totalSize = 0;
         for(const auto& filename : fileset.m_files) {
             auto theFilename = fileset.m_root + filename;
             auto p = theFilename.find_last_of('/');
             auto theDir = theFilename.substr(0, p);
             mkdirs(theDir.c_str());
-            totalSize += filesizes[i];
             int fd = open(theFilename.c_str(), O_RDWR | O_CREAT | O_TRUNC, theModes[i]);
             if(fd == -1) {
-                cleanup();
-                result.first = REMI_ERR_IO;
+                for(auto ffd : openedFileDescriptors)
+                    close(ffd);
+                std::get<0>(result) = REMI_ERR_IO;
                 req.respond(result);
                 return;
             }
-            if(filesizes[i] == 0) {
+            i += 1;
+            openedFileDescriptors.push_back(fd);
+        }
+        // store the operation into the map of pending operations
+        auto& op       = m_op_in_progress[std::get<2>(result)];
+        op.m_fileset   = std::move(fileset);
+        op.m_filesizes = std::move(filesizes);
+        op.m_modes     = std::move(theModes);
+        op.m_fds       = std::move(openedFileDescriptors);
+
+        req.respond(result);
+    }
+
+    void migrate_mmap(
+            const tl::request& req,
+            const uuid& operation_id,
+            tl::bulk& remote_bulk) 
+    {
+        int ret;
+        // get the operation associated with the operation id
+        auto it = m_op_in_progress.find(operation_id);
+        if(it == m_op_in_progress.end()) {
+            ret = REMI_ERR_INVALID_OPID;
+            req.respond(ret);
+            return;
+        }
+        auto& op = it->second;
+        // we found the operation, let's mmap some files!
+
+        std::vector<std::pair<void*,std::size_t>> theData;
+
+        // function to cleanup the segments
+        auto cleanup = [this, &theData, &it](bool error) {
+            for(auto& seg : theData) {
+                munmap(seg.first, seg.second);
+            }
+            if(error) {
+                this->m_op_in_progress.erase(it);
+            }
+        };
+
+        // compute total file size
+        size_t totalSize = 0;
+        for(auto& s : op.m_filesizes)
+            totalSize += s;
+
+        // create files, truncate them, and expose them with mmap
+        unsigned i=0;
+        for(int fd : op.m_fds) {
+            if(op.m_filesizes[i] == 0) {
                 i += 1;
-                close(fd);
                 continue;
             }
-            if(ftruncate(fd, filesizes[i]) == -1) {
-                cleanup();
-                result.first = REMI_ERR_IO;
-                req.respond(result);
+            if(ftruncate(fd, op.m_filesizes[i]) == -1) {
+                cleanup(true);
+                ret = REMI_ERR_IO;
+                req.respond(ret);
                 return;
             }
-            void *segment = mmap(0, filesizes[i], PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
-            close(fd);
+            void *segment = mmap(0, op.m_filesizes[i], PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
             if(segment == NULL) {
-                cleanup();
-                result.first = REMI_ERR_IO;
-                req.respond(result);
+                cleanup(true);
+                ret = REMI_ERR_IO;
+                req.respond(ret);
                 return;
             }
-            madvise(segment, filesizes[i], MADV_SEQUENTIAL);
-            theData.emplace_back(segment, filesizes[i]);
+            madvise(segment, op.m_filesizes[i], MADV_SEQUENTIAL);
+            theData.emplace_back(segment, op.m_filesizes[i]);
             i += 1;
         }
 
@@ -134,35 +187,127 @@ struct remi_provider : public tl::provider<remi_provider> {
 
         if(transferred != totalSize) {
             // XXX we should cleanup the files that were created
-            result.first = REMI_ERR_MIGRATION;
-            req.respond(result);
+            ret = REMI_ERR_MIGRATION;
+            req.respond(ret);
             return;
         }
 
         for(auto& seg : theData) {
             if(msync(seg.first, seg.second, MS_SYNC) == -1) {
                 // XXX we should cleanup the files that were created
-                cleanup();
-                result.first = REMI_ERR_IO;
-                req.respond(result);
+                cleanup(true);
+                ret = REMI_ERR_IO;
+                req.respond(ret);
                 return;
             }
         }
 
-        cleanup();
-
-        // call the "after" migration callback associated with the class of fileset
-        if(klass.m_after_callback != nullptr) {
-            result.second = klass.m_after_callback(&fileset, klass.m_uargs);
-        }
-        result.first = result.second == 0 ? REMI_SUCCESS : REMI_ERR_USER;
-        req.respond(result);
+        cleanup(false);
+        ret = REMI_SUCCESS;
+        req.respond(ret);
         return;
     }
 
-    remi_provider(tl::engine* e, uint16_t provider_id, tl::pool& pool)
-    : tl::provider<remi_provider>(*e, provider_id), m_engine(e), m_pool(pool) {
-        define("remi_migrate", &remi_provider::migrate, pool);
+    void migrate_end(const tl::request& req, const uuid& operation_id) 
+    {
+        // the result of this RPC should be a pair <errorcode, userstatus>
+        std::pair<int32_t, int32_t> result = {0,0};
+
+        // get the operation associated with the operation id
+        auto it = m_op_in_progress.find(operation_id);
+        if(it == m_op_in_progress.end()) {
+            result.first = REMI_ERR_INVALID_OPID;
+            req.respond(result);
+            return;
+        }
+        auto& op = it->second;
+
+        // close all the file descriptors
+        for(int fd : op.m_fds) {
+            close(fd);
+        }
+
+        // find the class of migration
+        auto& klass = m_migration_classes[op.m_fileset.m_class];
+
+        // call the "after" migration callback associated with the class of fileset
+        if(klass.m_after_callback != nullptr) {
+            result.second = klass.m_after_callback(&(op.m_fileset), klass.m_uargs);
+        }
+        result.first = result.second == 0 ? REMI_SUCCESS : REMI_ERR_USER;
+        req.respond(result);
+
+        m_op_in_progress.erase(it);
+
+        return;
+    }
+
+    void migrate_write(
+            const tl::request& req,
+            const uuid& operation_id,
+            uint32_t fileNumber,
+            size_t writeOffset,
+            const std::vector<char>& data)
+    {
+        int ret;
+        // get the operation associated with the operation id
+        auto it = m_op_in_progress.find(operation_id);
+        if(it == m_op_in_progress.end()) {
+            ret = REMI_ERR_INVALID_OPID;
+            req.respond(ret);
+            return;
+        }
+        auto& op = it->second;
+        // we found the operation, let's open some files!
+
+        std::vector<int> openedFileDescriptors;
+
+        // function to cleanup everything in case of error
+        auto cleanup = [this, &openedFileDescriptors, &it](bool error) {
+            for(auto& fd : openedFileDescriptors) {
+                close(fd);
+            }
+            if(error) {
+                this->m_op_in_progress.erase(it);
+            }
+        };
+
+        // check the RPC's target file index
+        // and the size of the file
+        if(fileNumber >= op.m_fds.size()) {
+            ret = REMI_ERR_IO;
+            cleanup(true);
+            req.respond(ret);
+            return;
+        }
+        if(op.m_filesizes[fileNumber] < writeOffset + data.size()) {
+            ret = REMI_ERR_IO;
+            cleanup(true);
+            req.respond(ret);
+            return;
+        }
+        // write the chunk received
+        int fd = op.m_fds[fileNumber];
+        auto s = pwrite(fd, data.data(), data.size(), writeOffset);
+
+        if(s != data.size()) {
+            ret = REMI_ERR_IO;
+            cleanup(true);
+            req.respond(ret);
+            return;
+        }
+
+        ret = REMI_SUCCESS;
+        req.respond(ret);
+        return;
+    }
+
+    remi_provider(tl::engine* e, abt_io_instance_id abtio, uint16_t provider_id, tl::pool& pool)
+    : tl::provider<remi_provider>(*e, provider_id), m_engine(e), m_pool(pool), m_abtio(abtio) {
+        define("remi_migrate_start", &remi_provider::migrate_start, pool);
+        define("remi_migrate_mmap", &remi_provider::migrate_mmap, pool);
+        define("remi_migrate_write", &remi_provider::migrate_write, pool);
+        define("remi_migrate_end", &remi_provider::migrate_end, pool);
         m_registered_providers[provider_id] = this;
     }
 
@@ -187,13 +332,14 @@ static void on_finalize(void* uargs) {
 
 extern "C" int remi_provider_register(
         margo_instance_id mid,
+        abt_io_instance_id abtio,
         uint16_t provider_id,
         ABT_pool pool,
         remi_provider_t* provider)
 {
     auto thePool   = tl::pool(pool);
     auto theEngine = new tl::engine(mid, THALLIUM_SERVER_MODE);
-    auto theProvider = new remi_provider(theEngine, provider_id, thePool);
+    auto theProvider = new remi_provider(theEngine, abtio, provider_id, thePool);
     margo_push_finalize_callback(mid, on_finalize, theProvider);
     *provider = theProvider;
     return REMI_SUCCESS;
@@ -203,6 +349,7 @@ extern "C" int remi_provider_registered(
         margo_instance_id mid,
         uint16_t provider_id,
         int* flag,
+        abt_io_instance_id* abtio,
         ABT_pool* pool,
         remi_provider_t* provider)
 {
@@ -214,6 +361,7 @@ extern "C" int remi_provider_registered(
     } else {
         remi_provider* p = it->second;
         if(provider) *provider = p;
+        if(abtio) *abtio = p->m_abtio;
         if(pool) *pool = p->m_pool.native_handle();
         *flag = 1;
     }

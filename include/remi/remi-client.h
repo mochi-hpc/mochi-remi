@@ -7,6 +7,7 @@
 #define __REMI_CLIENT_H
 
 #include <remi/remi-common.h>
+#include <abt-io.h>
 #include <margo.h>
 
 #if defined(__cplusplus)
@@ -29,11 +30,15 @@ typedef struct remi_provider_handle* remi_provider_handle_t;
  * @brief Initializes a REMI client.
  *
  * @param[in] mid Margo instance.
+ * @param[in] abtio ABT-IO instance.
  * @param[out] client Resulting client.
  *
  * @return REMI_SUCCESS or error code defined in remi-common.h.
  */
-int remi_client_init(margo_instance_id mid, remi_client_t* client);
+int remi_client_init(
+        margo_instance_id mid, 
+        abt_io_instance_id abtio,
+        remi_client_t* client);
 
 /**
  * @brief Finalizes a REMI client.
@@ -100,7 +105,8 @@ int remi_shutdown_service(remi_client_t client, hg_addr_t addr);
  * @param handle Provider handle of the target provider.
  * @param fileset Fileset to migrate.
  * @param remote_root Root of the fileset when migrated.
- * @param flag REMI_REMOVE_SOURCE or REMI_KEEP_SOURCE.
+ * @param remove_source REMI_REMOVE_SOURCE or REMI_KEEP_SOURCE.
+ * @param mode REMI_USE_MMAP or REMI_USE_ABTIO.
  * @param status Value returned by the user-defined migration callbacks.
  *
  * @return REMI_SUCCESS or error code defined in remi-common.h.
@@ -109,7 +115,8 @@ int remi_fileset_migrate(
         remi_provider_handle_t handle,
         remi_fileset_t fileset,
         const char* remote_root,
-        int flag,
+        int remove_source,
+        int mode,
         int* status);
 
 #if defined(__cplusplus)

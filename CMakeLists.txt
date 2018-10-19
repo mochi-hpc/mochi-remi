@@ -34,6 +34,8 @@ set (BUILD_SHARED_LIBS "OFF" CACHE BOOL "Build a shared library")
 include (xpkg-import)
 find_package (thallium REQUIRED)
 xpkg_import_module (margo REQUIRED margo)
+xpkg_import_module (abt-io REQUIRED abt-io)
+xpkg_import_module (uuid REQUIRED uuid)
 
 add_subdirectory (src)
 add_subdirectory (test)

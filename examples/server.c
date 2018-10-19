@@ -38,6 +38,7 @@ int main(int argc, char** argv)
     char* listen_addr_str     = argv[1];
     uint16_t provider_id      = 1;
     margo_instance_id mid     = MARGO_INSTANCE_NULL;
+    abt_io_instance_id abtio  = ABT_IO_INSTANCE_NULL;
     remi_provider_t remi_prov = REMI_PROVIDER_NULL;
     hg_addr_t my_addr         = HG_ADDR_NULL;
 
@@ -67,8 +68,11 @@ int main(int argc, char** argv)
     margo_addr_free(mid, my_addr);
     fprintf(stdout,"Server running at address %s\n", my_addr_str);
 
+    // initialize ABT-IO
+    // TODO
+
     // create the REMI provider
-    ret = remi_provider_register(mid, 1, REMI_ABT_POOL_DEFAULT, &remi_prov);
+    ret = remi_provider_register(mid, abtio, 1, REMI_ABT_POOL_DEFAULT, &remi_prov);
     if(ret != REMI_SUCCESS) {
         fprintf(stderr, "ERROR: remi_provider_register() returned %d\n", ret);
         ret = -1;
