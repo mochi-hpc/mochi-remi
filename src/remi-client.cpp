@@ -429,8 +429,6 @@ int migrate_using_abtio(
                     current_chunk_size = remaining_size < max_chunk_size ? remaining_size : max_chunk_size;
                     current_buffer.resize(current_chunk_size);
                     auto sizeRead = abt_io_pread(abtio, fd, &current_buffer[0], current_chunk_size, current_chunk_offset);
-                    current_chunk_offset += current_chunk_size;
-                    remaining_size -= current_chunk_size;
                 }
                 // wait for the RPC to finish
                 ret = async_req.wait();
@@ -439,6 +437,8 @@ int migrate_using_abtio(
                 if(!can_stop) {
                     previous_chunk_offset = current_chunk_offset;
                     previous_chunk_size = current_chunk_size;
+                    current_chunk_offset += current_chunk_size;
+                    remaining_size -= current_chunk_size;
                     std::swap(current_buffer, previous_buffer);
                 }
             }

@@ -89,6 +89,7 @@ int main(int argc, char** argv)
     }
     remi_fileset_register_metadata(fileset, "AERED", "qerqwer");
 
+    remi_fileset_set_xfer_size(fileset, 4);
     // migrate the fileset
     int status = 0;
     ret =  remi_fileset_migrate(remi_ph, fileset, remote_root, REMI_KEEP_SOURCE, REMI_USE_ABTIO, &status);

@@ -329,23 +329,23 @@ struct remi_provider : public tl::provider<remi_provider> {
         int fd = op.m_fds[fileNumber];
         ssize_t s;
         {   // only HDDs will be locked to avoid concurrent writes 
-            std::lock_guard<device>(*(op.m_devices[fileNumber]));
+            std::lock_guard<device> guard(*(op.m_devices[fileNumber]));
 
             // send an early response so the client can start sending the next chunk
             // in parallel while this chunk is being written
             ret = REMI_SUCCESS;
             req.respond(ret);
-
+            
             if(m_abtio == ABT_IO_INSTANCE_NULL) {
                 s = pwrite(fd, data.data(), data.size(), writeOffset);
             } else {
                 s = abt_io_pwrite(m_abtio, fd, data.data(), data.size(), writeOffset);
             }
+            if(s != data.size()) {
+                op.m_error = REMI_ERR_IO;
+            }
         }
 
-        if(s != data.size()) {
-            op.m_error = REMI_ERR_IO;
-        }
 
         return;
     }
