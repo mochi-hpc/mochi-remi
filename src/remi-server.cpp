@@ -56,6 +56,7 @@ struct operation {
     std::vector<mode_t>      m_modes;
     std::vector<int>         m_fds;
     std::vector<device*>     m_devices;
+    tl::mutex                m_mutex;
     int                      m_error = REMI_SUCCESS;
 };
 
@@ -165,27 +166,32 @@ struct remi_provider : public tl::provider<remi_provider> {
         }
         auto& op = it->second;
 
-        // close all the file descriptors
-        for(int fd : op.m_fds) {
-            close(fd);
-        }
+        { 
+            std::lock_guard<tl::mutex> guard(op.m_mutex);
 
-        if(op.m_error != REMI_SUCCESS) {
-            result.first = op.m_error;
+            // close all the file descriptors
+            for(int fd : op.m_fds) {
+                close(fd);
+            }
+
+            if(op.m_error != REMI_SUCCESS) {
+                result.first = op.m_error;
+                req.respond(result);
+                m_op_in_progress.erase(it);
+                return;
+            }
+
+            // find the class of migration
+            auto& klass = m_migration_classes[op.m_fileset.m_class];
+
+            // call the "after" migration callback associated with the class of fileset
+            if(klass.m_after_callback != nullptr) {
+                result.second = klass.m_after_callback(&(op.m_fileset), klass.m_uargs);
+            }
+            result.first = result.second == 0 ? REMI_SUCCESS : REMI_ERR_USER;
             req.respond(result);
-            m_op_in_progress.erase(it);
-            return;
-        }
 
-        // find the class of migration
-        auto& klass = m_migration_classes[op.m_fileset.m_class];
-
-        // call the "after" migration callback associated with the class of fileset
-        if(klass.m_after_callback != nullptr) {
-            result.second = klass.m_after_callback(&(op.m_fileset), klass.m_uargs);
         }
-        result.first = result.second == 0 ? REMI_SUCCESS : REMI_ERR_USER;
-        req.respond(result);
 
         m_op_in_progress.erase(it);
 
@@ -295,6 +301,9 @@ struct remi_provider : public tl::provider<remi_provider> {
             return;
         }
         auto& op = it->second;
+
+        std::lock_guard<tl::mutex> guard(op.m_mutex);
+
         // we found the operation, let's open some files!
 
         std::vector<int> openedFileDescriptors;
@@ -345,7 +354,6 @@ struct remi_provider : public tl::provider<remi_provider> {
                 op.m_error = REMI_ERR_IO;
             }
         }
-
 
         return;
     }
