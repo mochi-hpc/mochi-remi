@@ -35,6 +35,28 @@ extern "C" int remi_fileset_free(remi_fileset_t fileset)
     return REMI_SUCCESS;
 }
 
+extern "C" int remi_fileset_set_xfer_size(
+        remi_fileset_t fileset,
+        size_t size)
+{
+    if(fileset == REMI_FILESET_NULL
+    || size == 0)
+        return REMI_ERR_INVALID_ARG;
+    fileset->m_xfer_size = size;
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_fileset_get_xfer_size(
+        remi_fileset_t fileset,
+        size_t* size)
+{
+    if(fileset == REMI_FILESET_NULL
+    || size == nullptr)
+        return REMI_ERR_INVALID_ARG;
+    *size = fileset->m_xfer_size;
+    return REMI_SUCCESS;
+}
+
 extern "C" int remi_fileset_get_class(
         remi_fileset_t fileset,
         char* buf,

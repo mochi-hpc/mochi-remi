@@ -26,6 +26,11 @@ int my_post_migration_callback(remi_fileset_t fileset, void* uargs) {
     return 0;
 }
 
+static void finalize_abtio(void* data) {
+    abt_io_instance_id abtio = (abt_io_instance_id)data;
+    abt_io_finalize(abtio);
+}
+
 int main(int argc, char** argv)
 {
     if(argc != 2) {
@@ -69,7 +74,8 @@ int main(int argc, char** argv)
     fprintf(stdout,"Server running at address %s\n", my_addr_str);
 
     // initialize ABT-IO
-    // TODO
+    abtio = abt_io_init(1);
+    margo_push_finalize_callback(mid, finalize_abtio, (void*)abtio);
 
     // create the REMI provider
     ret = remi_provider_register(mid, abtio, 1, REMI_ABT_POOL_DEFAULT, &remi_prov);
@@ -78,6 +84,11 @@ int main(int argc, char** argv)
         ret = -1;
         goto error;
     }
+
+    // set /tmp and /home as HDDs, /dev/shm as memory
+    remi_set_device("/tmp",  REMI_DEVICE_HDD);
+    remi_set_device("/home", REMI_DEVICE_HDD);
+    remi_set_device("/dev/shm", REMI_DEVICE_MEM);
 
     // create migration class
     ret = remi_provider_register_migration_class(remi_prov, 

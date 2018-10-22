@@ -20,6 +20,7 @@ struct remi_fileset {
     std::map<std::string,std::string> m_metadata;
     std::set<std::string>             m_files;
     std::set<std::string>             m_directories;
+    size_t                            m_xfer_size = 1048576;
 
     template<typename A>
     void serialize(A& ar) {
@@ -28,6 +29,7 @@ struct remi_fileset {
         ar & m_metadata;
         ar & m_files;
         ar & m_directories;
+        ar & m_xfer_size;
     }
 };
 

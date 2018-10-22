@@ -16,6 +16,9 @@ extern "C" {
 #define REMI_ABT_POOL_DEFAULT ABT_POOL_NULL /* Default Argobots pool for REMI */
 #define REMI_PROVIDER_ID_DEFAULT 0          /* Default provider id for REMI */
 
+#define REMI_DEVICE_MEM 1 
+#define REMI_DEVICE_HDD 2
+#define REMI_DEVICE_SSD 3
 
 /**
  * @brief REMI provider type.
@@ -109,6 +112,21 @@ int remi_provider_register_migration_class(
         remi_migration_callback_t after_migration_cb,
         remi_uarg_free_t free_fn,
         void* uargs);
+
+/**
+ * @brief Set the type of device for a given mount point. Calling this function
+ * gives an opportunity for REMI to optimize transfers to files in this device,
+ * .e.g by using locks that are specific to this device (not shared with other
+ * devices), by restraining concurrency, etc.
+ *
+ * @param mount_point Mount point of the device.
+ * @param type Type of device (REMI_DEVICE_MEM, REMI_DEVICE_HDD, REMI_DEVICE_SSD).
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_set_device(
+        const char* mount_point,
+        int type);
 
 #if defined(__cplusplus)
 }

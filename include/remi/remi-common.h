@@ -121,6 +121,33 @@ int remi_fileset_get_root(
         size_t* size);
 
 /**
+ * @brief Sets the transfer size for this fileset. This attribute
+ * has an effect only if the fileset is migrated with the REMI_USE_ABTIO
+ * option. It determins the maximum size of data an RPC is allowed to
+ * transfer at once.
+ *
+ * @param[in] fileset Fileset for which to set the xfer size.
+ * @param[in] size New size.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_set_xfer_size(
+        remi_fileset_t fileset,
+        size_t size);
+
+/**
+ * @brief Gets the transfer size for this fileset.
+ *
+ * @param[in] fileset Fileset for which to get the xfer size.
+ * @param[out] size resulting size.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_get_xfer_size(
+        remi_fileset_t fileset,
+        size_t* size);
+
+/**
  * @brief Registers a file in the fileset. The provided path
  * should be relative to the fileset's root. The file does not need
  * to exist at the moment it is being registered (it needs to exist

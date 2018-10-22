@@ -369,7 +369,7 @@ int migrate_using_abtio(
     auto abtio = ph->m_client->m_abtio;
 
     // send a series of migrate_write RPC, pipelined with abti-io pread calls
-    size_t max_chunk_size = 1048576; // XXX make this configurable
+    size_t max_chunk_size = fileset->m_xfer_size;
 
     if(abtio == ABT_IO_INSTANCE_NULL) {
 

@@ -33,11 +33,30 @@ struct migration_class {
     void*                     m_uargs;
 };
 
+struct device {
+    int                    m_type;
+    tl::mutex              m_mutex;
+
+    void lock() {
+        if(m_type != REMI_DEVICE_HDD)
+            return;
+        m_mutex.lock();
+    }
+
+    void unlock() {
+        if(m_type != REMI_DEVICE_HDD)
+            return;
+        m_mutex.unlock();
+    }
+};
+
 struct operation {
     remi_fileset             m_fileset;
     std::vector<std::size_t> m_filesizes;
     std::vector<mode_t>      m_modes;
     std::vector<int>         m_fds;
+    std::vector<device*>     m_devices;
+    int                      m_error = REMI_SUCCESS;
 };
 
 struct remi_provider : public tl::provider<remi_provider> {
@@ -48,7 +67,8 @@ struct remi_provider : public tl::provider<remi_provider> {
     abt_io_instance_id                                  m_abtio;
     std::unordered_map<uuid, operation, uuid_hash>      m_op_in_progress;
 
-    static std::unordered_map<uint16_t, remi_provider*> m_registered_providers;
+    static std::unordered_map<uint16_t, remi_provider*> s_registered_providers;
+    static std::unordered_map<std::string, device>      s_devices;
 
     void migrate_start(
             const tl::request& req,
@@ -92,8 +112,9 @@ struct remi_provider : public tl::provider<remi_provider> {
             return;
         }
 
-        // create and open the files
+        // create and open the files, record the device they belong to
         std::vector<int> openedFileDescriptors;
+        std::vector<device*> devices;
         unsigned i=0;
         for(const auto& filename : fileset.m_files) {
             auto theFilename = fileset.m_root + filename;
@@ -110,6 +131,14 @@ struct remi_provider : public tl::provider<remi_provider> {
             }
             i += 1;
             openedFileDescriptors.push_back(fd);
+            // find the device
+            device* d = &s_devices["###"];
+            for(auto& p : s_devices) {
+                if(theFilename.find(p.first) == 0) {
+                    d = &(p.second);
+                }
+            }
+            devices.push_back(d);
         }
         // store the operation into the map of pending operations
         auto& op       = m_op_in_progress[std::get<2>(result)];
@@ -117,8 +146,50 @@ struct remi_provider : public tl::provider<remi_provider> {
         op.m_filesizes = std::move(filesizes);
         op.m_modes     = std::move(theModes);
         op.m_fds       = std::move(openedFileDescriptors);
+        op.m_devices   = std::move(devices);
 
         req.respond(result);
+    }
+
+    void migrate_end(const tl::request& req, const uuid& operation_id) 
+    {
+        // the result of this RPC should be a pair <errorcode, userstatus>
+        std::pair<int32_t, int32_t> result = {0,0};
+
+        // get the operation associated with the operation id
+        auto it = m_op_in_progress.find(operation_id);
+        if(it == m_op_in_progress.end()) {
+            result.first = REMI_ERR_INVALID_OPID;
+            req.respond(result);
+            return;
+        }
+        auto& op = it->second;
+
+        // close all the file descriptors
+        for(int fd : op.m_fds) {
+            close(fd);
+        }
+
+        if(op.m_error != REMI_SUCCESS) {
+            result.first = op.m_error;
+            req.respond(result);
+            m_op_in_progress.erase(it);
+            return;
+        }
+
+        // find the class of migration
+        auto& klass = m_migration_classes[op.m_fileset.m_class];
+
+        // call the "after" migration callback associated with the class of fileset
+        if(klass.m_after_callback != nullptr) {
+            result.second = klass.m_after_callback(&(op.m_fileset), klass.m_uargs);
+        }
+        result.first = result.second == 0 ? REMI_SUCCESS : REMI_ERR_USER;
+        req.respond(result);
+
+        m_op_in_progress.erase(it);
+
+        return;
     }
 
     void migrate_mmap(
@@ -208,40 +279,6 @@ struct remi_provider : public tl::provider<remi_provider> {
         return;
     }
 
-    void migrate_end(const tl::request& req, const uuid& operation_id) 
-    {
-        // the result of this RPC should be a pair <errorcode, userstatus>
-        std::pair<int32_t, int32_t> result = {0,0};
-
-        // get the operation associated with the operation id
-        auto it = m_op_in_progress.find(operation_id);
-        if(it == m_op_in_progress.end()) {
-            result.first = REMI_ERR_INVALID_OPID;
-            req.respond(result);
-            return;
-        }
-        auto& op = it->second;
-
-        // close all the file descriptors
-        for(int fd : op.m_fds) {
-            close(fd);
-        }
-
-        // find the class of migration
-        auto& klass = m_migration_classes[op.m_fileset.m_class];
-
-        // call the "after" migration callback associated with the class of fileset
-        if(klass.m_after_callback != nullptr) {
-            result.second = klass.m_after_callback(&(op.m_fileset), klass.m_uargs);
-        }
-        result.first = result.second == 0 ? REMI_SUCCESS : REMI_ERR_USER;
-        req.respond(result);
-
-        m_op_in_progress.erase(it);
-
-        return;
-    }
-
     void migrate_write(
             const tl::request& req,
             const uuid& operation_id,
@@ -286,19 +323,30 @@ struct remi_provider : public tl::provider<remi_provider> {
             req.respond(ret);
             return;
         }
+
+
         // write the chunk received
         int fd = op.m_fds[fileNumber];
-        auto s = pwrite(fd, data.data(), data.size(), writeOffset);
+        ssize_t s;
+        {   // only HDDs will be locked to avoid concurrent writes 
+            std::lock_guard<device>(*(op.m_devices[fileNumber]));
 
-        if(s != data.size()) {
-            ret = REMI_ERR_IO;
-            cleanup(true);
+            // send an early response so the client can start sending the next chunk
+            // in parallel while this chunk is being written
+            ret = REMI_SUCCESS;
             req.respond(ret);
-            return;
+
+            if(m_abtio == ABT_IO_INSTANCE_NULL) {
+                s = pwrite(fd, data.data(), data.size(), writeOffset);
+            } else {
+                s = abt_io_pwrite(m_abtio, fd, data.data(), data.size(), writeOffset);
+            }
         }
 
-        ret = REMI_SUCCESS;
-        req.respond(ret);
+        if(s != data.size()) {
+            op.m_error = REMI_ERR_IO;
+        }
+
         return;
     }
 
@@ -308,16 +356,20 @@ struct remi_provider : public tl::provider<remi_provider> {
         define("remi_migrate_mmap", &remi_provider::migrate_mmap, pool);
         define("remi_migrate_write", &remi_provider::migrate_write, pool);
         define("remi_migrate_end", &remi_provider::migrate_end, pool);
-        m_registered_providers[provider_id] = this;
+        s_registered_providers[provider_id] = this;
+        if(s_devices.count("###")) { // default device
+            s_devices["###"].m_type = REMI_DEVICE_MEM;
+        }
     }
 
     ~remi_provider() {
-        m_registered_providers.erase(get_provider_id());
+        s_registered_providers.erase(get_provider_id());
     }
 
 };
 
-std::unordered_map<uint16_t, remi_provider*> remi_provider::m_registered_providers;
+std::unordered_map<uint16_t, remi_provider*> remi_provider::s_registered_providers;
+std::unordered_map<std::string, device>      remi_provider::s_devices;
 
 static void on_finalize(void* uargs) {
     auto provider = static_cast<remi_provider_t>(uargs);
@@ -353,8 +405,8 @@ extern "C" int remi_provider_registered(
         ABT_pool* pool,
         remi_provider_t* provider)
 {
-    auto it = remi_provider::m_registered_providers.find(provider_id);
-    if(it == remi_provider::m_registered_providers.end()) {
+    auto it = remi_provider::s_registered_providers.find(provider_id);
+    if(it == remi_provider::s_registered_providers.end()) {
         if(pool) *pool = ABT_POOL_NULL;
         if(provider) *provider = REMI_PROVIDER_NULL;
         *flag = 0;
@@ -385,5 +437,19 @@ extern "C" int remi_provider_register_migration_class(
     klass.m_after_callback = after_callback;
     klass.m_uargs = uargs;
     klass.m_free = free_fn;
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_set_device(
+        const char* mount_point,
+        int type)
+{
+    std::string mp(mount_point);
+    for(auto& p : remi_provider::s_devices) {
+        if(p.first.find(mp) == 0  // an already-registered device starts with this mount-point
+        || mp.find(p.first) == 0) // this mount-point starts with an already registered device
+            return REMI_ERR_INVALID_ARG;
+    }
+    remi_provider::s_devices[mp].m_type = type;
     return REMI_SUCCESS;
 }
