@@ -12,6 +12,9 @@ cmake_minimum_required (VERSION 3.0)
 project (remi C CXX)
 enable_testing ()
 
+option(ENABLE_TESTS    "Build tests. May require CppUnit_ROOT" OFF)
+option(ENABLE_EXAMPLES "Build examples" OFF)
+
 # add our cmake module directory to the path
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
      "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -38,5 +41,9 @@ xpkg_import_module (abt-io REQUIRED abt-io)
 xpkg_import_module (uuid REQUIRED uuid)
 
 add_subdirectory (src)
-add_subdirectory (test)
-add_subdirectory (examples)
+if(${ENABLE_TESTS})
+  add_subdirectory (test)
+endif(${ENABLE_TESTS})
+if(${ENABLE_EXAMPLES})
+  add_subdirectory (examples)
+endif(${ENABLE_EXAMPLES})
