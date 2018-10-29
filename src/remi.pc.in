@@ -9,4 +9,5 @@ Version: 0.1
 
 Requires: thallium
 Libs: -L${libdir} @PRIVATE_LIBS@
+Libs.private: -lstdc++
 Cflags: -I${includedir}
