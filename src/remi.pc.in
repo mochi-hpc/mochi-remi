@@ -5,7 +5,7 @@ includedir=${prefix}/include
 
 Name: remi 
 Description: REsource Migration Interface
-Version: 0.1
+Version: @REMI_VERSION@
 
 Requires: thallium
 Libs: -L${libdir} @PRIVATE_LIBS@
