@@ -7,6 +7,6 @@ Name: remi
 Description: REsource Migration Interface
 Version: @REMI_VERSION@
 
-Requires: thallium
+Requires: thallium abt-io
 Libs: -L${libdir} @PRIVATE_LIBS@
 Cflags: -I${includedir}
