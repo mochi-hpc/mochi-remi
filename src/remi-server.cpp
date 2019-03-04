@@ -420,7 +420,7 @@ extern "C" int remi_provider_register(
         remi_provider_t* provider)
 {
     auto thePool   = tl::pool(pool);
-    auto theEngine = new tl::engine(mid, THALLIUM_SERVER_MODE);
+    auto theEngine = new tl::engine(mid);
     auto theProvider = new remi_provider(theEngine, abtio, provider_id, thePool);
     margo_push_finalize_callback(mid, on_finalize, theProvider);
     *provider = theProvider;

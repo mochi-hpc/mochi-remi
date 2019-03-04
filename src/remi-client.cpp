@@ -58,7 +58,7 @@ extern "C" int remi_client_init(
         abt_io_instance_id abtio,
         remi_client_t* client)
 {
-    auto theEngine           = new tl::engine(mid, THALLIUM_CLIENT_MODE);
+    auto theEngine           = new tl::engine(mid);
     remi_client_t theClient  = new remi_client(theEngine, abtio);
     theClient->m_mid         = mid;
     *client = theClient;

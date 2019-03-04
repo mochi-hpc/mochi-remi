@@ -298,6 +298,22 @@ int remi_fileset_foreach_metadata(
         remi_metadata_callback_t callback,
         void* uargs);
 
+
+/**
+ * @brief Walk through the files pointed to by this fileset and
+ * compute the total size of the fileset.
+ *
+ * @param fileset Fileset on which to compute the size.
+ * @param include_metadata Whether to include metadata or not.
+ * @param size Resulting size.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_compute_size(
+        remi_fileset_t fileset,
+        int include_metadata,
+        size_t* size);
+
 #if defined(__cplusplus)
 }
 #endif

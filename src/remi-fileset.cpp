@@ -3,6 +3,15 @@
  * 
  * See COPYRIGHT in top-level directory.
  */
+#include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 #include <cstring>
 #include "remi/remi-common.h"
 #include "fs-util.hpp"
@@ -234,5 +243,58 @@ extern "C" int remi_fileset_foreach_metadata(
     for(auto& meta : fileset->m_metadata) {
         callback(meta.first.c_str(), meta.second.c_str(), uargs);
     }
+    return REMI_SUCCESS;
+}
+
+struct add_size_args {
+    size_t         size;
+    remi_fileset_t fileset;
+    int            ret;
+};
+
+static void add_metadata_size(const char* key, const char* value, void* uargs) {
+    add_size_args* args = static_cast<add_size_args*>(uargs);
+    args->size += strlen(key) + strlen(value) + 2;
+}
+
+static void add_file_size(const char* filename, void* uargs) {
+    add_size_args* args = static_cast<add_size_args*>(uargs);
+    if(args->ret != 0) return;
+    std::string theFilename = args->fileset->m_root + filename;
+    int fd = open(theFilename.c_str(), O_RDONLY, 0);
+    if(fd == -1) {
+        args->ret = -1;
+        return;
+    }
+    struct stat st;
+    if(0 != fstat(fd, &st)) {
+        close(fd);
+        args->ret = -1;
+        return;
+    }
+    args->size += st.st_size;
+}
+
+extern "C" int remi_fileset_compute_size(
+        remi_fileset_t fileset,
+        int include_metadata,
+        size_t* size)
+{
+    add_size_args args;
+    args.size = 0;
+    args.ret  = 0;
+    args.fileset = fileset;
+    int ret = remi_fileset_walkthrough(fileset, add_file_size, static_cast<void*>(&args));
+    if(ret != REMI_SUCCESS)
+        return ret;
+    if(args.ret != 0) {
+        return REMI_ERR_IO;
+    }
+    if(include_metadata) {
+        ret = remi_fileset_foreach_metadata(fileset, add_metadata_size, static_cast<void*>(&args));
+    }
+    if(ret != REMI_SUCCESS)
+        return ret;
+    *size = args.size;
     return REMI_SUCCESS;
 }

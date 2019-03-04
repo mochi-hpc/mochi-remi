@@ -89,6 +89,11 @@ int main(int argc, char** argv)
     }
     remi_fileset_register_metadata(fileset, "AERED", "qerqwer");
 
+    // check if we can compute the size of the fileset
+    size_t size = 0;
+    ret = remi_fileset_compute_size(fileset, 1, &size);
+    fprintf(stdout, "Transferring a fileset of size %ld\n", size);
+
     remi_fileset_set_xfer_size(fileset, 4);
     // migrate the fileset
     int status = 0;
