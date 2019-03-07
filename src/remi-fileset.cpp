@@ -272,6 +272,7 @@ static void add_file_size(const char* filename, void* uargs) {
         args->ret = -1;
         return;
     }
+    close(fd);
     args->size += st.st_size;
 }
 
