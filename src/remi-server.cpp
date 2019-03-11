@@ -125,6 +125,8 @@ struct remi_provider : public tl::provider<remi_provider> {
             mkdirs(theDir.c_str());
             int fd = open(theFilename.c_str(), O_RDWR | O_CREAT | O_TRUNC, theModes[i]);
             if(fd == -1) {
+                std::cerr << "remi-server.cpp: open() line " 
+                    << __LINE__ << " failed with errno " << errno << std::endl;
                 for(auto ffd : openedFileDescriptors)
                     close(ffd);
                 std::get<0>(result) = REMI_ERR_IO;
@@ -256,6 +258,8 @@ struct remi_provider : public tl::provider<remi_provider> {
                 continue;
             }
             if(ftruncate(fd, op->m_filesizes[i]) == -1) {
+                std::cerr << "remi-server.cpp: ftruncate() line " 
+                    << __LINE__ << " failed with errno " << errno << std::endl;
                 cleanup(true);
                 ret = REMI_ERR_IO;
                 req.respond(ret);
@@ -263,6 +267,8 @@ struct remi_provider : public tl::provider<remi_provider> {
             }
             void *segment = mmap(0, op->m_filesizes[i], PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
             if(segment == NULL) {
+                std::cerr << "remi-server.cpp: mmap() line " 
+                    << __LINE__ << " failed with errno " << errno << std::endl;
                 cleanup(true);
                 ret = REMI_ERR_IO;
                 req.respond(ret);
@@ -288,6 +294,8 @@ struct remi_provider : public tl::provider<remi_provider> {
 
         for(auto& seg : theData) {
             if(msync(seg.first, seg.second, MS_SYNC) == -1) {
+                std::cerr << "remi-server.cpp: msync() line " 
+                    << __LINE__ << " failed with errno " << errno << std::endl;
                 // XXX we should cleanup the files that were created
                 cleanup(true);
                 ret = REMI_ERR_IO;
@@ -344,12 +352,16 @@ struct remi_provider : public tl::provider<remi_provider> {
         // and the size of the file
         if(fileNumber >= op->m_fds.size()) {
             ret = REMI_ERR_IO;
+            std::cerr << "remi-server.cpp: line "
+                        << __LINE__ << " failed (fileNumber >= op->m_fds.size())" << std::endl;
             cleanup(true);
             req.respond(ret);
             return;
         }
         if(op->m_filesizes[fileNumber] < writeOffset + data.size()) {
             ret = REMI_ERR_IO;
+            std::cerr << "remi-server.cpp: line "
+                << __LINE__ << " failed (op->m_filesizes[fileNumber] < writeOffset + data.size())" << std::endl;
             cleanup(true);
             req.respond(ret);
             return;
@@ -374,6 +386,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             }
             if(s != data.size()) {
                 op->m_error = REMI_ERR_IO;
+                std::cerr << "remi-server.cpp: line " << __LINE__ << " failed (s != data.size())" << std::endl;
             }
         }
 
