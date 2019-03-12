@@ -55,7 +55,9 @@ struct operation {
     std::vector<std::size_t> m_filesizes;
     std::vector<mode_t>      m_modes;
     std::vector<int>         m_fds;
+#if 0
     std::vector<std::shared_ptr<device>> m_devices;
+#endif
     tl::mutex                m_mutex;
     int                      m_error = REMI_SUCCESS;
 };
@@ -70,7 +72,9 @@ struct remi_provider : public tl::provider<remi_provider> {
     tl::mutex                                           m_op_in_progress_mtx;
 
     static std::unordered_map<uint16_t, remi_provider*> s_registered_providers;
+#if 0
     static std::unordered_map<std::string, device>      s_devices;
+#endif
 
     void migrate_start(
             const tl::request& req,
@@ -116,7 +120,9 @@ struct remi_provider : public tl::provider<remi_provider> {
 
         // create and open the files, record the device they belong to
         std::vector<int> openedFileDescriptors;
+#if 0
         std::vector<std::shared_ptr<device>> devices;
+#endif
         unsigned i=0;
         for(const auto& filename : fileset.m_files) {
             auto theFilename = fileset.m_root + filename;
@@ -135,6 +141,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             }
             i += 1;
             openedFileDescriptors.push_back(fd);
+#if 0
             // find the device
             auto d = s_devices["###"];
             for(const auto& p : s_devices) {
@@ -143,6 +150,7 @@ struct remi_provider : public tl::provider<remi_provider> {
                 }
             }
             devices.push_back(d);
+#endif
         }
         // store the operation into the map of pending operations
         {
@@ -152,7 +160,9 @@ struct remi_provider : public tl::provider<remi_provider> {
             op.m_filesizes = std::move(filesizes);
             op.m_modes     = std::move(theModes);
             op.m_fds       = std::move(openedFileDescriptors);
+#if 0
             op.m_devices   = std::move(devices);
+#endif
         }
 
         req.respond(result);
@@ -371,9 +381,10 @@ struct remi_provider : public tl::provider<remi_provider> {
         // write the chunk received
         int fd = op->m_fds[fileNumber];
         ssize_t s;
-        {   // only HDDs will be locked to avoid concurrent writes 
+        {   // only HDDs will be locked to avoid concurrent writes
+#if 0
             std::lock_guard<device> guard(*(op->m_devices[fileNumber]));
-
+#endif
             // send an early response so the client can start sending the next chunk
             // in parallel while this chunk is being written
             ret = REMI_SUCCESS;
@@ -400,10 +411,12 @@ struct remi_provider : public tl::provider<remi_provider> {
         define("remi_migrate_write", &remi_provider::migrate_write, pool);
         define("remi_migrate_end", &remi_provider::migrate_end, pool);
         s_registered_providers[provider_id] = this;
+#if 0
         if(s_devices.count("###")) { // default device
             s_devices["###"] = std::make_shared<device>();
             s_devices["###"]->m_type = REMI_DEVICE_MEM;
         }
+#endif
     }
 
     ~remi_provider() {
@@ -496,6 +509,7 @@ extern "C" int remi_set_device(
         const char* mount_point,
         int type)
 {
+#if 0
     std::string mp(mount_point);
     for(auto& p : remi_provider::s_devices) {
         if(p.first.find(mp) == 0  // an already-registered device starts with this mount-point
@@ -503,5 +517,6 @@ extern "C" int remi_set_device(
             return REMI_ERR_INVALID_ARG;
     }
     remi_provider::s_devices[mp].m_type = type;
+#endif
     return REMI_SUCCESS;
 }
