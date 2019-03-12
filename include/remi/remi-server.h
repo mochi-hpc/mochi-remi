@@ -102,7 +102,7 @@ int remi_provider_registered(
  */
 int remi_provider_set_abt_io_instance(
         remi_provider_t provider,
-        abt_io_instance_id* abtio);
+        abt_io_instance_id abtio);
 
 /**
  * @brief Registers a migration class by providing a callback
