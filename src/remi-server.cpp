@@ -467,7 +467,7 @@ extern "C" int remi_provider_set_abt_io_instance(
         remi_provider_t provider,
         abt_io_instance_id* abtio)
 {
-    provider->m_abt_io = abtio;
+    provider->m_abtio = abtio;
     return REMI_SUCCESS;
 }
 
