@@ -93,6 +93,18 @@ int remi_provider_registered(
         remi_provider_t* provider);
 
 /**
+ * @brief Sets the ABT-IO instance to use for I/O.
+ *
+ * @param provider Provider.
+ * @param abtio ABT-IO instance.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_provider_set_abt_io_instance(
+        remi_provider_t provider,
+        abt_io_instance_id* abtio);
+
+/**
  * @brief Registers a migration class by providing a callback
  * to call when a fileset of that class is migrated.
  *

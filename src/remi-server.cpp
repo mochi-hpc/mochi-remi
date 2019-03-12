@@ -463,6 +463,14 @@ extern "C" int remi_provider_registered(
     return REMI_SUCCESS;
 }
 
+extern "C" int remi_provider_set_abt_io_instance(
+        remi_provider_t provider,
+        abt_io_instance_id* abtio)
+{
+    provider->m_abt_io = abtio;
+    return REMI_SUCCESS;
+}
+
 extern "C" int remi_provider_register_migration_class(
         remi_provider_t provider,
         const char* class_name,

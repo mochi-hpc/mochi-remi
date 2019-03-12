@@ -329,7 +329,6 @@ int migrate_using_abtio(
         // get file size
         struct stat st;
         if(0 != fstat(fd, &st)) {
-            close(fd);
             cleanup();
             return REMI_ERR_IO;
         }
