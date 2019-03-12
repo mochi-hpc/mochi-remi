@@ -55,7 +55,7 @@ struct operation {
     std::vector<std::size_t> m_filesizes;
     std::vector<mode_t>      m_modes;
     std::vector<int>         m_fds;
-    std::vector<std::share_ptr<device>> m_devices;
+    std::vector<std::shared_ptr<device>> m_devices;
     tl::mutex                m_mutex;
     int                      m_error = REMI_SUCCESS;
 };
