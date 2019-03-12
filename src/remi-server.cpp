@@ -55,7 +55,7 @@ struct operation {
     std::vector<std::size_t> m_filesizes;
     std::vector<mode_t>      m_modes;
     std::vector<int>         m_fds;
-    std::vector<device*>     m_devices;
+    std::vector<std::share_ptr<device>> m_devices;
     tl::mutex                m_mutex;
     int                      m_error = REMI_SUCCESS;
 };
@@ -116,7 +116,7 @@ struct remi_provider : public tl::provider<remi_provider> {
 
         // create and open the files, record the device they belong to
         std::vector<int> openedFileDescriptors;
-        std::vector<device*> devices;
+        std::vector<std::shared_ptr<device>> devices;
         unsigned i=0;
         for(const auto& filename : fileset.m_files) {
             auto theFilename = fileset.m_root + filename;
@@ -136,10 +136,10 @@ struct remi_provider : public tl::provider<remi_provider> {
             i += 1;
             openedFileDescriptors.push_back(fd);
             // find the device
-            device* d = &s_devices["###"];
-            for(auto& p : s_devices) {
+            auto d = s_devices["###"];
+            for(const auto& p : s_devices) {
                 if(theFilename.find(p.first) == 0) {
-                    d = &(p.second);
+                    d = p.second;
                 }
             }
             devices.push_back(d);
@@ -401,7 +401,8 @@ struct remi_provider : public tl::provider<remi_provider> {
         define("remi_migrate_end", &remi_provider::migrate_end, pool);
         s_registered_providers[provider_id] = this;
         if(s_devices.count("###")) { // default device
-            s_devices["###"].m_type = REMI_DEVICE_MEM;
+            s_devices["###"] = std::make_shared<device>();
+            s_devices["###"]->m_type = REMI_DEVICE_MEM;
         }
     }
 
