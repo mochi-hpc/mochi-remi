@@ -426,7 +426,9 @@ struct remi_provider : public tl::provider<remi_provider> {
 };
 
 std::unordered_map<uint16_t, remi_provider*> remi_provider::s_registered_providers;
+#if 0
 std::unordered_map<std::string, device>      remi_provider::s_devices;
+#endif
 
 static void on_finalize(void* uargs) {
     auto provider = static_cast<remi_provider_t>(uargs);
