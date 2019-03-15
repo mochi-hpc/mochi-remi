@@ -68,7 +68,7 @@ struct remi_provider : public tl::provider<remi_provider> {
     tl::engine*                                         m_engine;
     tl::pool&                                           m_pool;
     abt_io_instance_id                                  m_abtio;
-    std::unordered_map<uuid, operation, uuid_hash>      m_op_in_progress;
+    std::unordered_map<uuid, std::unique_ptr<operation>, uuid_hash>      m_op_in_progress;
     tl::mutex                                           m_op_in_progress_mtx;
 
     static std::unordered_map<uint16_t, remi_provider*> s_registered_providers;
@@ -155,11 +155,12 @@ struct remi_provider : public tl::provider<remi_provider> {
         // store the operation into the map of pending operations
         {
             std::lock_guard<tl::mutex> guard(m_op_in_progress_mtx);
-            auto& op       = m_op_in_progress[std::get<2>(result)];
-            op.m_fileset   = std::move(fileset);
-            op.m_filesizes = std::move(filesizes);
-            op.m_modes     = std::move(theModes);
-            op.m_fds       = std::move(openedFileDescriptors);
+            auto r = m_op_in_progress.insert(std::make_pair(std::get<2>(result), std::make_unique<operation>()));
+            auto& op        = r.first->second;
+            op->m_fileset   = std::move(fileset);
+            op->m_filesizes = std::move(filesizes);
+            op->m_modes     = std::move(theModes);
+            op->m_fds       = std::move(openedFileDescriptors);
 #if 0
             op.m_devices   = std::move(devices);
 #endif
@@ -183,7 +184,7 @@ struct remi_provider : public tl::provider<remi_provider> {
                 req.respond(result);
                 return;
             }
-            op = &(it->second);
+            op = it->second.get();
         }
 
         { 
@@ -238,7 +239,7 @@ struct remi_provider : public tl::provider<remi_provider> {
                 req.respond(ret);
                 return;
             }
-            op = &(it->second);
+            op = it->second.get();
         }
         // we found the operation, let's mmap some files!
 
@@ -251,7 +252,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             }
             if(error) {
                 std::lock_guard<tl::mutex> guard(m_op_in_progress_mtx);
-                this->m_op_in_progress.erase(operation_id);
+                m_op_in_progress.erase(operation_id);
             }
         };
 
@@ -338,7 +339,7 @@ struct remi_provider : public tl::provider<remi_provider> {
                 req.respond(ret);
                 return;
             }
-            op = &(it->second);
+            op = it->second.get();
         }
 
         std::lock_guard<tl::mutex> guard(op->m_mutex);
@@ -372,6 +373,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             ret = REMI_ERR_IO;
             std::cerr << "remi-server.cpp: line "
                 << __LINE__ << " failed (op->m_filesizes[fileNumber] < writeOffset + data.size())" << std::endl;
+            std::cerr << "with fileNumber=" << fileNumber << ", writeOffset=" << writeOffset << ", data.size()=" << data.size() << std::endl;
             cleanup(true);
             req.respond(ret);
             return;
