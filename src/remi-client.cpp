@@ -74,6 +74,18 @@ extern "C" int remi_client_finalize(remi_client_t client)
     return REMI_SUCCESS;
 }
 
+extern "C" int remi_client_set_abt_io_instance(
+        remi_client_t client,
+        abt_io_instance_id abtio)
+{
+    if(client) {
+        client->m_abtio = abtio;
+        return REMI_SUCCESS;
+    } else {
+        return REMI_ERR_INVALID_ARG;
+    }
+}
+
 extern "C" int remi_provider_handle_create(
         remi_client_t client,
         hg_addr_t addr,

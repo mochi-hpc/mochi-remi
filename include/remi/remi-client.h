@@ -119,6 +119,18 @@ int remi_fileset_migrate(
         int mode,
         int* status);
 
+/**
+ * @brief Sets the ABT-IO instance to use for I/O.
+ *
+ * @param client Client.
+ * @param abtio ABT-IO instance.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_client_set_abt_io_instance(
+        remi_client_t client,
+        abt_io_instance_id abtio);
+
 #if defined(__cplusplus)
 }
 #endif
