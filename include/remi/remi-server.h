@@ -68,6 +68,16 @@ int remi_provider_register(
         remi_provider_t* provider);
 
 /**
+ * @brief Destroys a REMI provider and deregisters its RPCs.
+ *
+ * @param provider Provider to deregister.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_provider_destroy(
+        remi_provider_t provider);
+
+/**
  * @brief Checks if a REMI provider with the given provider id
  * is registered. If yes, flag will be set to 1, provider
  * will be set to the registered provider, and pool will be set

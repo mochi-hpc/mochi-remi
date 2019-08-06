@@ -64,12 +64,16 @@ struct operation {
 
 struct remi_provider : public tl::provider<remi_provider> {
 
-    std::unordered_map<std::string, migration_class>    m_migration_classes;
     tl::engine*                                         m_engine;
+    std::unordered_map<std::string, migration_class>    m_migration_classes;
     tl::pool&                                           m_pool;
     abt_io_instance_id                                  m_abtio;
     std::unordered_map<uuid, std::unique_ptr<operation>, uuid_hash>      m_op_in_progress;
     tl::mutex                                           m_op_in_progress_mtx;
+    tl::remote_procedure                                m_migration_start_rpc;
+    tl::remote_procedure                                m_migration_mmap_rpc;
+    tl::remote_procedure                                m_migration_write_rpc;
+    tl::remote_procedure                                m_migration_end_rpc;
 
     static std::unordered_map<uint16_t, remi_provider*> s_registered_providers;
 #if 0
@@ -291,7 +295,7 @@ struct remi_provider : public tl::provider<remi_provider> {
         }
 
         // create a local bulk handle to expose the segments
-        auto localBulk = m_engine->expose(theData, tl::bulk_mode::write_only);
+        auto localBulk = get_engine().expose(theData, tl::bulk_mode::write_only);
 
         // issue bulk transfer
         size_t transferred = remote_bulk.on(req.get_endpoint()) >> localBulk;
@@ -407,11 +411,12 @@ struct remi_provider : public tl::provider<remi_provider> {
     }
 
     remi_provider(tl::engine* e, abt_io_instance_id abtio, uint16_t provider_id, tl::pool& pool)
-    : tl::provider<remi_provider>(*e, provider_id), m_engine(e), m_pool(pool), m_abtio(abtio) {
-        define("remi_migrate_start", &remi_provider::migrate_start, pool);
-        define("remi_migrate_mmap", &remi_provider::migrate_mmap, pool);
-        define("remi_migrate_write", &remi_provider::migrate_write, pool);
-        define("remi_migrate_end", &remi_provider::migrate_end, pool);
+    : tl::provider<remi_provider>(*e, provider_id), m_engine(e), m_pool(pool), m_abtio(abtio)
+    , m_migration_start_rpc(define("remi_migrate_start", &remi_provider::migrate_start, pool))
+    , m_migration_mmap_rpc(define("remi_migrate_mmap", &remi_provider::migrate_mmap, pool))
+    , m_migration_write_rpc(define("remi_migrate_write", &remi_provider::migrate_write, pool))
+    , m_migration_end_rpc(define("remi_migrate_end", &remi_provider::migrate_end, pool))
+    {
         s_registered_providers[provider_id] = this;
 #if 0
         if(s_devices.count("###")) { // default device
@@ -432,13 +437,17 @@ std::unordered_map<uint16_t, remi_provider*> remi_provider::s_registered_provide
 std::unordered_map<std::string, device>      remi_provider::s_devices;
 #endif
 
-static void on_finalize(void* uargs) {
+static void remi_on_finalize(void* uargs) {
     auto provider = static_cast<remi_provider_t>(uargs);
     for(auto& klass : provider->m_migration_classes) {
         if(klass.second.m_free != nullptr) {
             klass.second.m_free(klass.second.m_uargs);
         }
     }
+    provider->m_migration_start_rpc.deregister();
+    provider->m_migration_mmap_rpc.deregister();
+    provider->m_migration_write_rpc.deregister();
+    provider->m_migration_end_rpc.deregister();
     delete provider->m_engine;
     delete provider;
 }
@@ -453,8 +462,16 @@ extern "C" int remi_provider_register(
     auto thePool   = tl::pool(pool);
     auto theEngine = new tl::engine(mid);
     auto theProvider = new remi_provider(theEngine, abtio, provider_id, thePool);
-    margo_push_finalize_callback(mid, on_finalize, theProvider);
+    margo_provider_push_finalize_callback(mid, theProvider, remi_on_finalize, theProvider);
     *provider = theProvider;
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_provider_destroy(
+        remi_provider_t provider)
+{
+    margo_provider_pop_finalize_callback(provider->m_engine->get_margo_instance(), provider);
+    remi_on_finalize(provider);
     return REMI_SUCCESS;
 }
 
