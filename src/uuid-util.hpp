@@ -4,6 +4,7 @@
 #include <string>
 #include <array>
 #include <uuid/uuid.h>
+#include <cereal/types/base_class.hpp>
 #include <thallium/serialization/stl/array.hpp>
 
 class uuid : public std::array<unsigned char,16> {
@@ -22,11 +23,6 @@ class uuid : public std::array<unsigned char,16> {
     uuid(uuid&& other) = default;
     uuid& operator=(const uuid& other) = default;
     uuid& operator=(uuid&& other) = default;
-
-    template<typename Archive>
-    void serialize(Archive& a) {
-        a & static_cast<std::array<unsigned char,16>&>(*this);
-    }
 
     template<typename T>
     friend T& operator<<(T& stream, const uuid& id);
