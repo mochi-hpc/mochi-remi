@@ -29,6 +29,22 @@ set_target_properties (remi
     PROPERTIES VERSION ${REMI_VERSION}
     SOVERSION ${REMI_VERSION_MAJOR})
 
+
+if(${ENABLE_BEDROCK})
+
+  add_library(remi-bedrock remi-bedrock.c)
+  target_link_libraries(remi-bedrock remi)
+  target_include_directories (remi-bedrock PUBLIC $<INSTALL_INTERFACE:include>)
+  target_include_directories (remi-bedrock BEFORE PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
+
+  set_target_properties (remi-bedrock
+    PROPERTIES VERSION ${REMI_VERSION}
+    SOVERSION ${REMI_VERSION_MAJOR})
+
+endif()
+
+
 #
 # installation stuff (packaging and install commands)
 #
@@ -51,6 +67,11 @@ configure_file ("remi.pc.in" "remi.pc" @ONLY)
 install (TARGETS remi EXPORT remi-targets
          ARCHIVE DESTINATION lib
          LIBRARY DESTINATION lib)
+if(${ENABLE_BEDROCK})
+install (TARGETS remi-bedrock EXPORT remi-targets
+         ARCHIVE DESTINATION lib
+         LIBRARY DESTINATION lib)
+ endif()
 install (EXPORT remi-targets
          DESTINATION ${remi-pkg}
          FILE "remi-targets.cmake")

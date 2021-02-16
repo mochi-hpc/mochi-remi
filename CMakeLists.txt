@@ -14,6 +14,9 @@ enable_testing ()
 
 option(ENABLE_TESTS    "Build tests. May require CppUnit_ROOT" OFF)
 option(ENABLE_EXAMPLES "Build examples" OFF)
+option(ENABLE_BEDROCK  "Build Bedrock module" ON)
+
+set(BUILD_SHARED_LIBS ON)
 
 # add our cmake module directory to the path
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
@@ -38,6 +41,9 @@ find_package (thallium REQUIRED)
 pkg_check_modules (ABTIO REQUIRED IMPORTED_TARGET abt-io)
 pkg_check_modules (MARGO REQUIRED IMPORTED_TARGET margo)
 pkg_check_modules (UUID  REQUIRED IMPORTED_TARGET uuid)
+if(${ENABLE_BEDROCK})
+  find_package (bedrock REQUIRED)
+endif()
 
 add_subdirectory (src)
 if(${ENABLE_TESTS})
