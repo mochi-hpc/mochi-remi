@@ -1,6 +1,6 @@
 /*
  * (C) 2018 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #include <errno.h>
@@ -98,7 +98,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             req.respond(result);
             return;
         }
-        
+
         // check if any of the target files already exist
         // (we don't want to overwrite)
         for(const auto& filename : fileset.m_files) {
@@ -191,7 +191,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             op = it->second.get();
         }
 
-        { 
+        {
             std::lock_guard<tl::mutex> guard(op->m_mutex);
 
             // close all the file descriptors
@@ -230,7 +230,7 @@ struct remi_provider : public tl::provider<remi_provider> {
     void migrate_mmap(
             const tl::request& req,
             const uuid& operation_id,
-            tl::bulk& remote_bulk) 
+            tl::bulk& remote_bulk)
     {
         int ret;
         // get the operation associated with the operation id
@@ -395,7 +395,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             // in parallel while this chunk is being written
             ret = REMI_SUCCESS;
             req.respond(ret);
-            
+
             if(m_abtio == ABT_IO_INSTANCE_NULL) {
                 s = pwrite(fd, data.data(), data.size(), writeOffset);
             } else {
@@ -448,8 +448,9 @@ static void remi_on_finalize(void* uargs) {
     provider->m_migration_mmap_rpc.deregister();
     provider->m_migration_write_rpc.deregister();
     provider->m_migration_end_rpc.deregister();
-    delete provider->m_engine;
+    auto engine = provider->m_engine;
     delete provider;
+    delete engine;
 }
 
 extern "C" int remi_provider_register(
