@@ -13,11 +13,13 @@ and added it to your spack installation, you can install REMI using the followin
 command:
 
 ```
-spack install remi
+spack install mochi-remi
 ```
 
 REMI depends on [Thallium](https://xgitlab.cels.anl.gov/sds/thallium/), which
-Spack will install (if needed) along with Thallium's own dependencies.
+Spack will install (if needed) along with Thallium's own dependencies. It also
+depends on Bedrock, unless the `bedrock` variant is disable when installing
+with Spack (i.e. passing `~bedrock` to the above command).
 
 ### Overview
 
