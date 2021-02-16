@@ -77,7 +77,6 @@ install (EXPORT remi-targets
          FILE "remi-targets.cmake")
 install (FILES "${CMAKE_CURRENT_BINARY_DIR}/remi-config.cmake"
                "${CMAKE_CURRENT_BINARY_DIR}/remi-config-version.cmake"
-               "../cmake/xpkg-import.cmake"
          DESTINATION ${remi-pkg} )
 install (DIRECTORY ../include/remi
          DESTINATION include
