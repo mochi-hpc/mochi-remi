@@ -1,6 +1,6 @@
 /*
  * (C) 2018 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __REMI_SERVER_H
@@ -16,7 +16,7 @@ extern "C" {
 #define REMI_ABT_POOL_DEFAULT ABT_POOL_NULL /* Default Argobots pool for REMI */
 #define REMI_PROVIDER_ID_DEFAULT 0          /* Default provider id for REMI */
 
-#define REMI_DEVICE_MEM 1 
+#define REMI_DEVICE_MEM 1
 #define REMI_DEVICE_HDD 2
 #define REMI_DEVICE_SSD 3
 

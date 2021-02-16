@@ -1,6 +1,6 @@
 /*
  * (C) 2018 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __REMI_CLIENT_H
@@ -36,7 +36,7 @@ typedef struct remi_provider_handle* remi_provider_handle_t;
  * @return REMI_SUCCESS or error code defined in remi-common.h.
  */
 int remi_client_init(
-        margo_instance_id mid, 
+        margo_instance_id mid,
         abt_io_instance_id abtio,
         remi_client_t* client);
 

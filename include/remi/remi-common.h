@@ -1,6 +1,6 @@
 /*
  * (C) 2018 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __REMI_COMMON_H
@@ -195,7 +195,7 @@ int remi_fileset_deregister_file(
 
 /**
  * @brief Deregisters a directory from the fileset. This deregisters
- * the directory only if the directory has been added using 
+ * the directory only if the directory has been added using
  * remi_fileset_register_directory. If individual files in the directory
  * have been added independently, this will not deregister them.
  *
