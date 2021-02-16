@@ -8,7 +8,7 @@
 #      -DCMAKE_PREFIX_PATH='/dir1;/dir2;/dir3'
 #
 
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.12)
 project (remi C CXX)
 enable_testing ()
 
@@ -27,18 +27,17 @@ set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE Release
          CACHE STRING "Choose the type of build." FORCE)
-    set_property (CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS 
+    set_property (CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
                   "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 endif ()
 set (CMAKE_PREFIX_PATH "" CACHE STRING "External dependencies path")
 set (BUILD_SHARED_LIBS "OFF" CACHE BOOL "Build a shared library")
 
 # packages we depend on
-include (xpkg-import)
 find_package (thallium REQUIRED)
-xpkg_import_module (margo REQUIRED margo)
-xpkg_import_module (abt-io REQUIRED abt-io)
-xpkg_import_module (uuid REQUIRED uuid)
+pkg_check_modules (ABTIO REQUIRED IMPORTED_TARGET abt-io)
+pkg_check_modules (MARGO REQUIRED IMPORTED_TARGET margo)
+pkg_check_modules (UUID  REQUIRED IMPORTED_TARGET uuid)
 
 add_subdirectory (src)
 if(${ENABLE_TESTS})

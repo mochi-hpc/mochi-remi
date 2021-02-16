@@ -11,13 +11,13 @@ set (remi-pkg "share/cmake/remi")
 # library version set here (e.g. for shared libs).
 #
 set (REMI_VERSION_MAJOR 0)
-set (REMI_VERSION_MINOR 1)
+set (REMI_VERSION_MINOR 3)
 set (REMI_VERSION_PATCH 0)
 set (remi-vers "${REMI_VERSION_MAJOR}.${REMI_VERSION_MINOR}")
 set (REMI_VERSION "${remi-vers}.${REMI_VERSION_PATCH}")
 
 add_library(remi ${remi-src})
-target_link_libraries (remi thallium margo abt-io uuid)
+target_link_libraries (remi thallium PkgConfig::MARGO PkgConfig::ABTIO PkgConfig::UUID)
 target_include_directories (remi PUBLIC $<INSTALL_INTERFACE:include>)
 
 # local include's BEFORE, in case old incompatable .h files in prefix/include
