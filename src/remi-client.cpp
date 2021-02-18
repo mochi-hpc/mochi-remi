@@ -15,6 +15,8 @@
 #include <uuid/uuid.h>
 #include <thallium.hpp>
 #include <thallium/serialization/stl/pair.hpp>
+#include <thallium/serialization/stl/string.hpp>
+#include <thallium/serialization/stl/vector.hpp>
 #include "uuid-util.hpp"
 #include "fs-util.hpp"
 #include "remi/remi-client.h"

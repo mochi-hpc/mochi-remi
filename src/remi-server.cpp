@@ -18,6 +18,8 @@
 #include <abt-io.h>
 #include <thallium.hpp>
 #include <thallium/serialization/stl/pair.hpp>
+#include <thallium/serialization/stl/string.hpp>
+#include <thallium/serialization/stl/vector.hpp>
 #include <thallium/serialization/stl/tuple.hpp>
 #include "remi/remi-server.h"
 #include "remi-fileset.hpp"
