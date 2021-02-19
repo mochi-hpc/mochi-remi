@@ -8,7 +8,12 @@
 #include <remi/remi-server.h>
 #include <string.h>
 
-static struct bedrock_dependency remi_dependencies[] = {
+static struct bedrock_dependency remi_provider_dependencies[] = {
+    { "abt_io", "abt_io", 0 },
+    BEDROCK_NO_MORE_DEPENDENCIES
+};
+
+static struct bedrock_dependency remi_client_dependencies[] = {
     { "abt_io", "abt_io", 0 },
     BEDROCK_NO_MORE_DEPENDENCIES
 };
@@ -50,16 +55,27 @@ static char* remi_get_provider_config(
 }
 
 static int remi_init_client(
-        margo_instance_id mid,
+        bedrock_args_t args,
         bedrock_module_client_t* client)
 {
-    return remi_client_init(mid, ABT_IO_INSTANCE_NULL, (remi_client_t*)client);
+    margo_instance_id mid = bedrock_args_get_margo_instance(args);
+    abt_io_instance_id abt_io = ABT_IO_INSTANCE_NULL;
+    if(bedrock_args_get_num_dependencies(args, "abt_io")) {
+        abt_io = (abt_io_instance_id)bedrock_args_get_dependency(args, "abt_io", 0);
+    }
+    return remi_client_init(mid, abt_io, (remi_client_t*)client);
 }
 
 static int remi_finalize_client(
         bedrock_module_client_t client)
 {
     return remi_client_finalize((remi_client_t)client);
+}
+
+static char* remi_get_client_config(
+        bedrock_module_provider_t provider) {
+    (void)provider;
+    return strdup("{}");
 }
 
 static int remi_create_provider_handle(
@@ -86,9 +102,11 @@ static struct bedrock_module remi = {
     .get_provider_config     = remi_get_provider_config,
     .init_client             = remi_init_client,
     .finalize_client         = remi_finalize_client,
+    .get_client_config       = remi_get_client_config,
     .create_provider_handle  = remi_create_provider_handle,
     .destroy_provider_handle = remi_destroy_provider_handle,
-    .dependencies            = remi_dependencies
+    .provider_dependencies   = remi_provider_dependencies,
+    .client_dependencies     = remi_client_dependencies
 };
 
 BEDROCK_REGISTER_MODULE(remi, remi)
