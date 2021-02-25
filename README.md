@@ -39,5 +39,5 @@ mmap them into memory, and issue an RDMA pull operation from the client's files
 Following successful migration, the provider will call a user-supplied callback
 corresponding to the particular fileset's migration class.
 
-For an example of code, please see the [examples](https://xgitlab.cels.anl.gov/sds/remi/tree/master/examples)
+For an example of code, please see the [examples](examples)
 folder in the source tree.
