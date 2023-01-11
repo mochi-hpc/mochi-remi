@@ -18,7 +18,7 @@ set (REMI_VERSION "${remi-vers}.${REMI_VERSION_PATCH}")
 
 add_library (remi ${remi-src})
 target_link_libraries (remi
-    PUBLIC thallium PkgConfig::MARGO PkgConfig::ABTIO PkgConfig::UUID
+    PUBLIC thallium PkgConfig::margo PkgConfig::abt-io PkgConfig::uuid
     PRIVATE coverage_config)
 target_include_directories (remi PUBLIC $<INSTALL_INTERFACE:include>)
 
