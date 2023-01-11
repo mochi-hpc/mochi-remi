@@ -56,7 +56,12 @@ write_basic_package_version_file (
     COMPATIBILITY AnyNewerVersion)
 
 # generate our config file for find_package()
-configure_file (remi-config.cmake.in remi-config.cmake @ONLY)
+set (INCLUDE_INSTALL_DIR include/)
+set (LIB_INSTALL_DIR lib/)
+configure_package_config_file (remi-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/remi-config.cmake
+    INSTALL_DESTINATION ${LIB_INSTALL_DIR}/remi/cmake
+    PATH_VARS INCLUDE_INSTALL_DIR)
 
 # some bits for the pkg-config file
 set (DEST_DIR "${CMAKE_INSTALL_PREFIX}")

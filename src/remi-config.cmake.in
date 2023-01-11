@@ -5,7 +5,7 @@ set (REMI_VERSION @REMI_VERSION@)
 
 @PACKAGE_INIT@
 
-set_and_check (YOKAN_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@")
+set_and_check (REMI_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@")
 
 check_required_components (remi)
 
