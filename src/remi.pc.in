@@ -3,10 +3,10 @@ exec_prefix=${prefix}
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: remi 
+Name: remi
 Description: REsource Migration Interface
 Version: @REMI_VERSION@
 
-Requires: thallium abt-io
+Requires: thallium margo abt-io uuid
 Libs: -L${libdir} @PRIVATE_LIBS@
 Cflags: -I${includedir}
