@@ -11,8 +11,8 @@ set (remi-pkg "share/cmake/remi")
 # library version set here (e.g. for shared libs).
 #
 set (REMI_VERSION_MAJOR 0)
-set (REMI_VERSION_MINOR 4)
-set (REMI_VERSION_PATCH 0)
+set (REMI_VERSION_MINOR 3)
+set (REMI_VERSION_PATCH 2)
 set (remi-vers "${REMI_VERSION_MAJOR}.${REMI_VERSION_MINOR}")
 set (REMI_VERSION "${remi-vers}.${REMI_VERSION_PATCH}")
 
