@@ -121,6 +121,18 @@ int remi_fileset_get_root(
         size_t* size);
 
 /**
+ * @brief Change the root of the fileset.
+ *
+ * @param fileset Fileset in which to change the root.
+ * @param path New root path.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_set_root(
+        remi_fileset_t fileset,
+        const char* path);
+
+/**
  * @brief Sets the transfer size for this fileset. This attribute
  * has an effect only if the fileset is migrated with the REMI_USE_ABTIO
  * option. It determins the maximum size of data an RPC is allowed to

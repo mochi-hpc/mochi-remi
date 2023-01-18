@@ -105,6 +105,16 @@ extern "C" int remi_fileset_get_root(
     return REMI_SUCCESS;
 }
 
+extern "C" int remi_fileset_set_root(
+        remi_fileset_t fileset,
+        const char* root)
+{
+    if(fileset == REMI_FILESET_NULL)
+        return REMI_ERR_INVALID_ARG;
+    fileset->m_root = root ? root : "";
+    return REMI_SUCCESS;
+}
+
 extern "C" int remi_fileset_register_file(
         remi_fileset_t fileset,
         const char* filename)
