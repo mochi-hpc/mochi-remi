@@ -296,6 +296,21 @@ int remi_fileset_deregister_metadata(
         const char* key);
 
 /**
+ * @brief Get the metadata associated with a given key.
+ * The caller should NOT free the resulting pointer.
+ *
+ * @param fileset Fileset.
+ * @param key Metadata key.
+ * @param value Resultig value.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_get_metadata(
+        remi_fileset_t fileset,
+        const char* key,
+        const char** value);
+
+/**
  * @brief Iterates over the key/value pairs and call the
  * provided callback on each of them and on the user-provided argument.
  *

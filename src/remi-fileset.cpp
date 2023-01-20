@@ -1,6 +1,6 @@
 /*
  * (C) 2018 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #include <sys/stat.h>
@@ -20,7 +20,7 @@
 extern "C" int remi_fileset_create(
         const char* fileset_class,
         const char* fileset_root,
-        remi_fileset_t* fileset) 
+        remi_fileset_t* fileset)
 {
     if(fileset_class == NULL || fileset_root == NULL)
         return REMI_ERR_INVALID_ARG;
@@ -227,6 +227,19 @@ extern "C" int remi_fileset_register_metadata(
     if(fileset == REMI_FILESET_NULL || key == NULL)
         return REMI_ERR_INVALID_ARG;
     fileset->m_metadata[key] = value;
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_fileset_get_metadata(
+          remi_fileset_t fileset,
+          const char* key,
+          const char** value)
+{
+    if(fileset == REMI_FILESET_NULL || key == NULL)
+        return REMI_ERR_INVALID_ARG;
+    if(fileset->m_metadata.count(key) == 0)
+        return REMI_ERR_UNKNOWN_META;
+    *value = fileset->m_metadata[key].c_str();
     return REMI_SUCCESS;
 }
 
