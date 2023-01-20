@@ -30,15 +30,21 @@ typedef struct remi_provider* remi_provider_t;
  * @brief Callback called when a migration starts or completes.
  * This callback takes the fileset that will or has been migrated, as well
  * as a pointer to user-provided arguments corresponding to the void*
- * argument given when registering the migration class.
+ * argument given when registering the migration class, and a char** pointer.
+ *
  * The function should return 0 when successful, a non-zero value
  * otherwise. If a callback called before migration returns a non-zero
  * value, this will abort the migration. If a callback called after the
  * migration returns a non-zero value, the source of the migration will
  * not erase its original files. In all cases, the return value of this
  * function is propagated back to the source.
+ *
+ * The char** pointer can be set to a heap-allocated, NULL-terminated
+ * string that will be freed by the callback caller and propagated
+ * back to the client. This string can be used to propagate information
+ * on the location and idendification of the migrated resource.
  */
-typedef int32_t (*remi_migration_callback_t)(remi_fileset_t, void*);
+typedef int32_t (*remi_migration_callback_t)(remi_fileset_t, void*, char**);
 #define REMI_MIGRATION_CALLBACK_NULL ((remi_migration_callback_t)0)
 
 

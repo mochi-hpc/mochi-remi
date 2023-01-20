@@ -1,6 +1,6 @@
 /*
  * (C) 2018 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #include <sys/stat.h>
@@ -49,7 +49,7 @@ struct remi_provider_handle : public tl::provider_handle {
 
     remi_client_t m_client    = nullptr;
     uint64_t      m_ref_count = 0;
-    
+
     template<typename ... Args>
     remi_provider_handle(Args&&... args)
     : tl::provider_handle(std::forward<Args>(args)...) {}
@@ -135,19 +135,12 @@ static void list_existing_files(const char* filename, void* uargs) {
     files->emplace(filename);
 }
 
-static int migrate_using_mmap(
-        remi_provider_handle_t ph,
-        remi_fileset_t fileset,
-        const std::set<std::string>& files,
-        const std::string& remote_root,
-        int* status);
-
-static int migrate_using_abtio(
-        remi_provider_handle_t ph,
-        remi_fileset_t fileset,
-        const std::set<std::string>& files,
-        const std::string& remote_root,
-        int* status);
+static void set_status(void* uargs, int status, const char* x, const char* y)
+{
+    (void)x;
+    (void)y;
+    if(uargs) *static_cast<int*>(uargs) = status;
+}
 
 extern "C" int remi_fileset_migrate(
         remi_provider_handle_t ph,
@@ -156,6 +149,34 @@ extern "C" int remi_fileset_migrate(
         int remove_source,
         int mode,
         int* status)
+{
+    return remi_fileset_migrate_ext(ph, fileset, remote_root, remove_source, mode, set_status, status);
+}
+
+static int migrate_using_mmap(
+        remi_provider_handle_t ph,
+        remi_fileset_t fileset,
+        const std::set<std::string>& files,
+        const std::string& remote_root,
+        remi_migration_client_cb_t cb,
+        void* uargs);
+
+static int migrate_using_abtio(
+        remi_provider_handle_t ph,
+        remi_fileset_t fileset,
+        const std::set<std::string>& files,
+        const std::string& remote_root,
+        remi_migration_client_cb_t cb,
+        void* uargs);
+
+extern "C" int remi_fileset_migrate_ext(
+        remi_provider_handle_t ph,
+        remi_fileset_t fileset,
+        const char* remote_root,
+        int remove_source,
+        int mode,
+        remi_migration_client_cb_t cb,
+        void* uargs)
 {
     int ret;
 
@@ -176,17 +197,13 @@ extern "C" int remi_fileset_migrate(
             static_cast<void*>(&files));
 
     if(mode == REMI_USE_MMAP) {
-        ret = migrate_using_mmap(ph, fileset, files, theRemoteRoot.c_str(), status);
+        ret = migrate_using_mmap(ph, fileset, files, theRemoteRoot.c_str(), cb, uargs);
     } else {
-        ret = migrate_using_abtio(ph, fileset, files, theRemoteRoot.c_str(), status);
+        ret = migrate_using_abtio(ph, fileset, files, theRemoteRoot.c_str(), cb, uargs);
     }
 
     if(ret != REMI_SUCCESS) {
         return ret;
-    }
-
-    if(*status != 0) {
-        return REMI_ERR_USER;
     }
 
     if(remove_source == REMI_REMOVE_SOURCE) {
@@ -208,13 +225,24 @@ int migrate_using_mmap(
         remi_fileset_t fileset,
         const std::set<std::string>& files,
         const std::string& remote_root,
-        int* status)
+        remi_migration_client_cb_t cb,
+        void* uargs)
 {
     // expose the data
     std::vector<std::pair<void*,std::size_t>> theData;
     std::vector<std::size_t> theSizes;
     std::vector<mode_t> theModes;
 
+    std::tuple<int32_t, int32_t, uuid, std::string> start_call_result = {0,0,uuid{},""};
+    std::tuple<int32_t, int32_t, std::string> end_call_result = {0,0,""};
+
+    auto call_cb = [&start_call_result, &end_call_result, cb, uargs]() {
+        int status = std::get<1>(start_call_result) | std::get<1>(end_call_result);
+        // note: only one of the above will be non-zero
+        cb(uargs, status,
+           std::get<3>(start_call_result).c_str(),
+           std::get<2>(end_call_result).c_str());
+    };
 
     // prepare lambda for cleaning up mapped files
     auto cleanup = [&theData]() {
@@ -263,7 +291,7 @@ int migrate_using_mmap(
 
     // expose the segments for bulk operations
     tl::bulk localBulk;
-    if(theData.size() != 0) 
+    if(theData.size() != 0)
         localBulk = ph->m_client->m_engine->expose(theData, tl::bulk_mode::read_only);
 
     // create a copy of the fileset where m_directory is empty
@@ -277,13 +305,12 @@ int migrate_using_mmap(
 
     // call migrate_start RPC
     // the response is in the form <errorcode, userstatus, uuid>
-    std::tuple<int32_t, int32_t, uuid> start_call_result 
+    start_call_result
         = ph->m_client->m_migrate_start_rpc.on(*ph)(*fileset, theSizes, theModes);
     int ret = std::get<0>(start_call_result);
     if(ret != REMI_SUCCESS) {
         cleanup();
-        if(ret == REMI_ERR_USER)
-            *status = std::get<1>(start_call_result);
+        if(ret == REMI_ERR_USER) call_cb();
         return ret;
     }
     auto& operation_id = std::get<2>(start_call_result);
@@ -298,15 +325,20 @@ int migrate_using_mmap(
 
     if(ret != REMI_SUCCESS) {
         cleanup();
+        if(ret == REMI_ERR_USER) call_cb();
         return ret;
     }
-    
+
     // xfer went ok, now send migrate_end rpc.
-    // the response is in the form <errorcode, userstatus>
-    std::pair<int32_t, int32_t> end_call_result = 
+    // the response is in the form <errorcode, userstatus, extra_str>
+    end_call_result =
         ph->m_client->m_migrate_end_rpc.on(*ph)(operation_id);
 
     cleanup();
+
+    ret = std::get<0>(end_call_result);
+    if(ret == REMI_SUCCESS || ret == REMI_ERR_USER)
+        call_cb();
 
     return ret;
 }
@@ -316,13 +348,25 @@ int migrate_using_abtio(
         remi_fileset_t fileset,
         const std::set<std::string>& files,
         const std::string& remote_root,
-        int* status)
+        remi_migration_client_cb_t cb,
+        void* uargs)
 {
     // expose the data
     std::vector<int> openedFileDescriptors;
     std::vector<std::pair<void*,std::size_t>> theData;
     std::vector<std::size_t> theSizes;
     std::vector<mode_t> theModes;
+
+    std::tuple<int32_t, int32_t, uuid, std::string> start_call_result = {0,0,uuid{},""};
+    std::tuple<int32_t, int32_t, std::string> end_call_result = {0,0,""};
+
+    auto call_cb = [&start_call_result, &end_call_result, cb, uargs]() {
+        int status = std::get<1>(start_call_result) | std::get<1>(end_call_result);
+        // note: only one of the above will be non-zero
+        cb(uargs, status,
+           std::get<3>(start_call_result).c_str(),
+           std::get<2>(end_call_result).c_str());
+    };
 
     auto cleanup = [&openedFileDescriptors]() {
         for(auto& fd : openedFileDescriptors) {
@@ -362,14 +406,12 @@ int migrate_using_abtio(
     fileset->m_root = remote_root;
 
     // call migrate_start RPC
-    // the response is in the form <errorcode, userstatus, uuid>
-    std::tuple<int32_t, int32_t, uuid> start_call_result 
+    start_call_result
         = ph->m_client->m_migrate_start_rpc.on(*ph)(*fileset, theSizes, theModes);
     int ret = std::get<0>(start_call_result);
     if(ret != REMI_SUCCESS) {
         cleanup();
-        if(ret == REMI_ERR_USER)
-            *status = std::get<1>(start_call_result);
+        if(ret == REMI_ERR_USER) call_cb();
         return ret;
     }
     // put back the fileset's original members
@@ -399,8 +441,8 @@ int migrate_using_abtio(
                 current_offset += chunk_size;
                 remaining_size -= chunk_size;
             }
-        } 
-    
+        }
+
     } else {
 
         size_t current_chunk_offset  = 0; // offset of the chunk that ABT-IO has to read in this iteration
@@ -465,22 +507,20 @@ int migrate_using_abtio(
 
     if(ret != REMI_SUCCESS) {
         cleanup();
+        if(ret == REMI_ERR_USER) call_cb();
         return ret;
     }
-    
+
     // xfer went ok, now send migrate_end rpc.
-    // the response is in the form <errorcode, userstatus>
-    std::pair<int32_t, int32_t> end_call_result = 
+    // the response is in the form <errorcode, userstatus, extra>
+    end_call_result =
         ph->m_client->m_migrate_end_rpc.on(*ph)(operation_id);
 
     cleanup();
 
-    ret = end_call_result.first;
-    if(ret == REMI_ERR_USER) {
-        *status = end_call_result.second;
-    } else {
-        *status = 0;
-    }
+    ret = std::get<0>(end_call_result);
+    if(ret == REMI_SUCCESS || ret == REMI_ERR_USER)
+        call_cb();
 
     return ret;
 }

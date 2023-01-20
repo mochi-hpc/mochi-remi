@@ -96,6 +96,16 @@ int remi_provider_handle_release(remi_provider_handle_t handle);
 int remi_shutdown_service(remi_client_t client, hg_addr_t addr);
 
 /**
+ * @brief Type of callback used by remi_fileset_migrate.
+ *
+ * @param void* User-provided argument.
+ * @param int   Status of the migration (returned by the migration callback on server).
+ * @param char  Extra info provided by the pre-migration callback.
+ * @param char  Extra info provided by the post-migration callback.
+ */
+typedef void (*remi_migration_client_cb_t)(void*, int, const char*, const char*);
+
+/**
  * @brief Migrates a fileset to a remote provider. All the files
  * of the local fileset will be transfered over RDMA to the destination
  * provider and a remote fileset will be created with the provided
@@ -107,17 +117,31 @@ int remi_shutdown_service(remi_client_t client, hg_addr_t addr);
  * @param remote_root Root of the fileset when migrated.
  * @param remove_source REMI_REMOVE_SOURCE or REMI_KEEP_SOURCE.
  * @param mode REMI_USE_MMAP or REMI_USE_ABTIO.
- * @param status Value returned by the user-defined migration callbacks.
+ * @param callback Callback to be called after migration.
+ * @param uargs Argument for the callback.
  *
  * @return REMI_SUCCESS or error code defined in remi-common.h.
  */
-int remi_fileset_migrate(
+int remi_fileset_migrate_ext(
         remi_provider_handle_t handle,
         remi_fileset_t fileset,
         const char* remote_root,
         int remove_source,
         int mode,
-        int* status);
+        remi_migration_client_cb_t cb,
+        void* uargs);
+
+/**
+ * @brief Same as remi_fileset_migrate_ext but without a callback.
+ * const char* data will be ignored and only the status will be set.
+ */
+int remi_fileset_migrate(
+          remi_provider_handle_t handle,
+          remi_fileset_t fileset,
+          const char* remote_root,
+          int remove_source,
+          int mode,
+          int* status);
 
 /**
  * @brief Sets the ABT-IO instance to use for I/O.
