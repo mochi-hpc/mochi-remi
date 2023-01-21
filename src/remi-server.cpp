@@ -89,7 +89,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             std::vector<mode_t>& theModes)
     {
         // tuple of <returnvalue, userstatus, uuid>
-        std::tuple<int32_t,int32_t,uuid,std::string> result;
+        std::tuple<int32_t,int32_t,uuid> result;
         std::get<0>(result) = 0;
         std::get<1>(result) = 1;
         // uuid is initialized at random, which is what we want
@@ -115,13 +115,9 @@ struct remi_provider : public tl::provider<remi_provider> {
 
         // call the "before migration" callback
         auto& klass = m_migration_classes[fileset.m_class];
-        char* extra_data = nullptr;
         if(klass.m_before_callback != nullptr) {
-            std::get<1>(result) = klass.m_before_callback(&fileset, klass.m_uargs, &extra_data);
+            std::get<1>(result) = klass.m_before_callback(&fileset, klass.m_uargs);
         }
-        std::get<3>(result) = extra_data ? std::string{extra_data} : std::string{};
-        free(extra_data);
-
         if(std::get<1>(result) != 0) {
             std::get<0>(result) = REMI_ERR_USER;
             req.respond(result);
@@ -179,10 +175,10 @@ struct remi_provider : public tl::provider<remi_provider> {
         req.respond(result);
     }
 
-    void migrate_end(const tl::request& req, const uuid& operation_id)
+    void migrate_end(const tl::request& req, const uuid& operation_id) 
     {
         // the result of this RPC should be a pair <errorcode, userstatus>
-        std::tuple<int32_t, int32_t, std::string> result = {0,0,""};
+        std::pair<int32_t, int32_t> result = {0,0};
 
         // get the operation associated with the operation id
         operation* op = nullptr;
@@ -190,7 +186,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             std::lock_guard<tl::mutex> guard(m_op_in_progress_mtx);
             auto it = m_op_in_progress.find(operation_id);
             if(it == m_op_in_progress.end()) {
-                std::get<0>(result) = REMI_ERR_INVALID_OPID;
+                result.first = REMI_ERR_INVALID_OPID;
                 req.respond(result);
                 return;
             }
@@ -206,7 +202,7 @@ struct remi_provider : public tl::provider<remi_provider> {
             }
 
             if(op->m_error != REMI_SUCCESS) {
-                std::get<0>(result) = op->m_error;
+                result.first = op->m_error;
                 req.respond(result);
                 std::lock_guard<tl::mutex> guard(m_op_in_progress_mtx);
                 m_op_in_progress.erase(operation_id);
@@ -217,13 +213,10 @@ struct remi_provider : public tl::provider<remi_provider> {
             auto& klass = m_migration_classes[op->m_fileset.m_class];
 
             // call the "after" migration callback associated with the class of fileset
-            char* extra_data = nullptr;
             if(klass.m_after_callback != nullptr) {
-                std::get<1>(result) = klass.m_after_callback(&(op->m_fileset), klass.m_uargs, &extra_data);
+                result.second = klass.m_after_callback(&(op->m_fileset), klass.m_uargs);
             }
-            std::get<0>(result) = std::get<1>(result) == 0 ? REMI_SUCCESS : REMI_ERR_USER;
-            std::get<2>(result) = extra_data ? std::string{extra_data} : std::string{};
-            free(extra_data);
+            result.first = result.second == 0 ? REMI_SUCCESS : REMI_ERR_USER;
             req.respond(result);
 
         }
