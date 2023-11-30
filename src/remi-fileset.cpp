@@ -85,6 +85,26 @@ extern "C" int remi_fileset_get_class(
     return REMI_SUCCESS;
 }
 
+extern "C" int remi_fileset_get_provider_id(
+        remi_fileset_t fileset,
+        uint16_t* provider_id)
+{
+    if(fileset == REMI_FILESET_NULL)
+        return REMI_ERR_INVALID_ARG;
+    *provider_id = fileset->m_provider_id;
+    return REMI_SUCCESS;
+}
+
+extern "C" int remi_fileset_set_provider_id(
+        remi_fileset_t fileset,
+        uint16_t provider_id)
+{
+    if(fileset == REMI_FILESET_NULL)
+        return REMI_ERR_INVALID_ARG;
+    fileset->m_provider_id = provider_id;
+    return REMI_SUCCESS;
+}
+
 extern "C" int remi_fileset_get_root(
         remi_fileset_t fileset,
         char* buf,

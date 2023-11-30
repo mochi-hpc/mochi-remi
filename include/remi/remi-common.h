@@ -73,6 +73,17 @@ int remi_fileset_create(
         remi_fileset_t* fileset);
 
 /**
+ * @brief Set a provider ID for the fileset.
+ *
+ * @param fileset Fileset.
+ * @param provider_id provider ID.
+ *
+ * @return REMI_SUCCESS or error code defined in remi-common.h.
+ */
+int remi_fileset_set_provider_id(
+        remi_fileset_t fileset, uint16_t provider_id);
+
+/**
  * @brief Frees a fileset. Passing a REMI_FILESET_NULL fileset
  * to this function is valid.
  *
@@ -100,6 +111,13 @@ int remi_fileset_get_class(
         remi_fileset_t fileset,
         char* buf,
         size_t* size);
+
+/**
+ * @brief Get the provider ID associated with the the fileset.
+ */
+int remi_fileset_get_provider_id(
+        remi_fileset_t fileset,
+        uint16_t* provider_id);
 
 /**
  * @brief Gets the root of the fileset. If buf is NULL, this

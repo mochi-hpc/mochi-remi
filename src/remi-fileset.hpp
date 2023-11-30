@@ -1,6 +1,6 @@
 /*
  * (C) 2018 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __REMI_FILESET_HPP
@@ -16,6 +16,7 @@
 struct remi_fileset {
 
     std::string                       m_class;
+    uint16_t                          m_provider_id;
     std::string                       m_root;
     std::map<std::string,std::string> m_metadata;
     std::set<std::string>             m_files;
@@ -25,6 +26,7 @@ struct remi_fileset {
     template<typename A>
     void serialize(A& ar) {
         ar & m_class;
+        ar & m_provider_id;
         ar & m_root;
         ar & m_metadata;
         ar & m_files;

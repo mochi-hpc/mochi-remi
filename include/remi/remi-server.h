@@ -136,6 +136,36 @@ int remi_provider_register_migration_class(
         void* uargs);
 
 /**
+ * @brief Same as remi_provider_register_migration_class
+ * but takes an extra provider_id argument.
+ */
+int remi_provider_register_provider_migration_class(
+        remi_provider_t provider,
+        const char* class_name,
+        uint16_t provider_id,
+        remi_migration_callback_t before_migration_cb,
+        remi_migration_callback_t after_migration_cb,
+        remi_uarg_free_t free_fn,
+        void* uargs);
+
+/**
+ * @brief Deregisters a migration class registered via
+ * remi_provider_register_migration_class.
+ */
+int remi_provider_deregister_migration_class(
+        remi_provider_t provider,
+        const char* class_name);
+
+/**
+ * @brief Deregisters a migration class registered via
+ * remi_provider_register_provider_migration_class.
+ */
+int remi_provider_deregister_provider_migration_class(
+        remi_provider_t provider,
+        const char* class_name,
+        uint16_t provider_id);
+
+/**
  * @brief Set the type of device for a given mount point. Calling this function
  * gives an opportunity for REMI to optimize transfers to files in this device,
  * .e.g by using locks that are specific to this device (not shared with other

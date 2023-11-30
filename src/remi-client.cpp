@@ -1,6 +1,6 @@
 /*
  * (C) 2018 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #include <sys/stat.h>
@@ -49,7 +49,7 @@ struct remi_provider_handle : public tl::provider_handle {
 
     remi_client_t m_client    = nullptr;
     uint64_t      m_ref_count = 0;
-    
+
     template<typename ... Args>
     remi_provider_handle(Args&&... args)
     : tl::provider_handle(std::forward<Args>(args)...) {}
@@ -98,6 +98,16 @@ extern "C" int remi_provider_handle_create(
         return REMI_ERR_INVALID_ARG;
     auto theHandle = new remi_provider_handle(
             tl::endpoint(*(client->m_engine), addr, false), provider_id);
+    try {
+        auto identity = theHandle->get_identity();
+        if(identity != "remi") {
+            delete theHandle;
+            return REMI_ERR_UNKNOWN_PR;
+        }
+    } catch(...) {
+        delete theHandle;
+        return REMI_ERR_UNKNOWN_PR;
+    }
     theHandle->m_client = client;
     theHandle->m_ref_count = 1;
     *handle = theHandle;
