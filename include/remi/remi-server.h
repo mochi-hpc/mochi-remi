@@ -103,6 +103,13 @@ int remi_provider_registered(
         remi_provider_t* provider);
 
 /**
+ * @brief Get the provider ID of a provider.
+ */
+int remi_provider_get_provider_id(
+          remi_provider_t provider,
+          uint16_t* provider_id);
+
+/**
  * @brief Sets the ABT-IO instance to use for I/O.
  *
  * @param provider Provider.

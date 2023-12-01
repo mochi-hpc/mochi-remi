@@ -445,6 +445,15 @@ extern "C" int remi_provider_destroy(
     return REMI_SUCCESS;
 }
 
+extern "C" int remi_provider_get_provider_id(
+        remi_provider_t provider,
+        uint16_t* provider_id)
+{
+    if(!provider) return REMI_ERR_INVALID_ARG;
+    *provider_id = provider->get_provider_id();
+    return REMI_SUCCESS;
+}
+
 extern "C" int remi_provider_registered(
         margo_instance_id mid,
         uint16_t provider_id,
