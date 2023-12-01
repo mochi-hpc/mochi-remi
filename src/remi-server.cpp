@@ -540,7 +540,7 @@ extern "C" int remi_provider_deregister_provider_migration_class(
     if(provider->m_migration_classes.count(key) == 0)
         return REMI_ERR_UNKNOWN_CLASS;
     auto& klass = provider->m_migration_classes[key];
-    klass.m_free(klass.m_uargs);
+    if(klass.m_free) klass.m_free(klass.m_uargs);
     provider->m_migration_classes.erase(key);
     return REMI_SUCCESS;
 }
