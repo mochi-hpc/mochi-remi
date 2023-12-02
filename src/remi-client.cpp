@@ -310,13 +310,20 @@ int migrate_using_mmap(
         cleanup();
         return ret;
     }
-    
+
     // xfer went ok, now send migrate_end rpc.
     // the response is in the form <errorcode, userstatus>
-    std::pair<int32_t, int32_t> end_call_result = 
+    std::pair<int32_t, int32_t> end_call_result =
         ph->m_client->m_migrate_end_rpc.on(*ph)(operation_id);
 
     cleanup();
+
+    ret = end_call_result.first;
+    if(ret == REMI_ERR_USER) {
+        *status = end_call_result.second;
+    } else {
+        *status = 0;
+    }
 
     return ret;
 }
@@ -409,8 +416,8 @@ int migrate_using_abtio(
                 current_offset += chunk_size;
                 remaining_size -= chunk_size;
             }
-        } 
-    
+        }
+
     } else {
 
         size_t current_chunk_offset  = 0; // offset of the chunk that ABT-IO has to read in this iteration
@@ -477,10 +484,10 @@ int migrate_using_abtio(
         cleanup();
         return ret;
     }
-    
+
     // xfer went ok, now send migrate_end rpc.
     // the response is in the form <errorcode, userstatus>
-    std::pair<int32_t, int32_t> end_call_result = 
+    std::pair<int32_t, int32_t> end_call_result =
         ph->m_client->m_migrate_end_rpc.on(*ph)(operation_id);
 
     cleanup();
