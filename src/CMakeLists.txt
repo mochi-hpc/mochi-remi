@@ -34,8 +34,8 @@ set_target_properties (remi
 
 if (${ENABLE_BEDROCK})
 
-  add_library (remi-bedrock remi-bedrock.c)
-  target_link_libraries (remi-bedrock remi)
+  add_library (remi-bedrock remi-bedrock.cpp)
+  target_link_libraries (remi-bedrock PRIVATE remi bedrock::module-api)
   target_include_directories (remi-bedrock PUBLIC $<INSTALL_INTERFACE:include>)
   target_include_directories (remi-bedrock BEFORE PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)

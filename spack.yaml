@@ -1,13 +1,12 @@
 spack:
   specs:
-  - cppunit
   - cmake
   - nlohmann-json
   - mochi-thallium
   - mercury~boostsys~checksum ^libfabric fabrics=tcp,rxm
-  - mochi-bedrock +abtio
+  - mochi-bedrock-module-api
   - uuid
-  - mochi-abt-io
+  - mochi-abt-io+bedrock
   concretizer:
     unify: true
     reuse: true
@@ -20,3 +19,5 @@ spack:
       require: "@0.15.0:"
     mochi-thallium:
       require: "@0.12.0:"
+    mochi-bedrock-module-api:
+      require: "@0.2.0:"

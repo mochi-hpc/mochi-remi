@@ -1,0 +1,3 @@
+#!/bin/bash
+SCRIPT_DIR=$(dirname "$0")
+cmake $SCRIPT_DIR -DENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_BEDROCK=ON
