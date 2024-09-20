@@ -34,13 +34,14 @@ set_target_properties (remi
 
 if (${ENABLE_BEDROCK})
 
-  add_library (remi-bedrock remi-bedrock.cpp)
-  target_link_libraries (remi-bedrock PRIVATE remi bedrock::module-api)
-  target_include_directories (remi-bedrock PUBLIC $<INSTALL_INTERFACE:include>)
-  target_include_directories (remi-bedrock BEFORE PUBLIC
+  add_library (remi-bedrock-module remi-bedrock.cpp)
+  target_compile_features (remi-bedrock-module PUBLIC cxx_std_17)
+  target_link_libraries (remi-bedrock-module PRIVATE remi bedrock::module-api)
+  target_include_directories (remi-bedrock-module PUBLIC $<INSTALL_INTERFACE:include>)
+  target_include_directories (remi-bedrock-module BEFORE PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
 
-  set_target_properties (remi-bedrock
+  set_target_properties (remi-bedrock-module
     PROPERTIES VERSION ${REMI_VERSION}
     SOVERSION ${REMI_VERSION_MAJOR})
 
@@ -75,7 +76,7 @@ install (TARGETS remi EXPORT remi-targets
          ARCHIVE DESTINATION lib
          LIBRARY DESTINATION lib)
 if (${ENABLE_BEDROCK})
-install (TARGETS remi-bedrock EXPORT remi-targets
+install (TARGETS remi-bedrock-module EXPORT remi-targets
          ARCHIVE DESTINATION lib
          LIBRARY DESTINATION lib)
 endif ()
